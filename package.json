@@ -1,0 +1,22 @@
+{
+  "name": "ygt-classes-coaching-portal",
+  "version": "2.0.0",
+  "description": "YGT Classes Coaching Database & Staff Management Suite",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "keywords": [
+    "coaching",
+    "education",
+    "students",
+    "attendance",
+    "fees",
+    "sqlite"
+  ],
+  "author": "YGT Classes",
+  "license": "ISC"
+}
