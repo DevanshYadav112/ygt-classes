@@ -131,6 +131,15 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 201, { success: true, batchId });
     }
 
+    if (pathname.startsWith('/api/batches/') && req.method === 'DELETE') {
+      const id = pathname.split('/')[3];
+      const deleted = db.deleteBatch(id);
+      if (!deleted) return sendJson(res, 404, { error: 'Batch not found' });
+      db.addActivityLog(staffName, 'BATCH_DELETED', `${staffName} deleted batch: ${deleted.name}`, null, id);
+      broadcast('data_changed', { type: 'batch_deleted', batchId: id, staffName });
+      return sendJson(res, 200, { success: true, batch: deleted });
+    }
+
     // 4. Students
     if (pathname === '/api/students' && req.method === 'GET') {
       const batch_id = parsedUrl.searchParams.get('batch_id');
@@ -238,6 +247,15 @@ const server = http.createServer(async (req, res) => {
       const newStaff = db.addStaff(body.name, body.role);
       broadcast('data_changed', { type: 'staff_added', staff: newStaff });
       return sendJson(res, 201, { success: true, staff: newStaff });
+    }
+
+    if (pathname.startsWith('/api/staff/') && req.method === 'DELETE') {
+      const id = pathname.split('/')[3];
+      const deleted = db.deleteStaff(id);
+      if (!deleted) return sendJson(res, 404, { error: 'Staff member not found' });
+      db.addActivityLog(staffName, 'STAFF_DELETED', `${staffName} deleted staff member: ${deleted.name}`);
+      broadcast('data_changed', { type: 'staff_deleted', id, staffName });
+      return sendJson(res, 200, { success: true, staff: deleted });
     }
 
     // 9. Excel / CSV File Upload

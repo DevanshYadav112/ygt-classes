@@ -174,6 +174,15 @@ function initDb(dbFilePath) {
       return info.lastInsertRowid;
     },
 
+    deleteBatch(id) {
+      const batch = db.prepare('SELECT * FROM batches WHERE id = ?').get(id);
+      if (!batch) return null;
+      db.prepare('UPDATE students SET batch_id = NULL WHERE batch_id = ?').run(id);
+      db.prepare('DELETE FROM attendance WHERE batch_id = ?').run(id);
+      db.prepare('DELETE FROM batches WHERE id = ?').run(id);
+      return batch;
+    },
+
     // Students
     getStudents({ batch_id, search, pending_only, limit = 100, offset = 0 } = {}) {
       let sql = `
@@ -567,6 +576,13 @@ function initDb(dbFilePath) {
       const stmt = db.prepare('INSERT INTO staff (name, role) VALUES (?, ?)');
       const info = stmt.run(name, role);
       return { id: info.lastInsertRowid, name, role };
+    },
+
+    deleteStaff(id) {
+      const staff = db.prepare('SELECT * FROM staff WHERE id = ?').get(id);
+      if (!staff) return null;
+      db.prepare('DELETE FROM staff WHERE id = ?').run(id);
+      return staff;
     }
   };
 }

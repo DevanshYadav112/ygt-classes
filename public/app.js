@@ -3,6 +3,9 @@
  * Real-Time Multi-Staff Collaboration, Attendance, Fees & Excel Upload
  */
 
+// Zero Cold-Start: Measure high-resolution start time for smooth ~800ms threshold
+const splashStartTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+
 // Bank of 52 Inspiring Thoughts of the Day (Science, Learning & Education)
 const QUOTES_OF_THE_DAY = [
   { quote: "The important thing is not to stop questioning. Curiosity has its own reason for existing.", author: "Albert Einstein", role: "Theoretical Physicist", category: "Curiosity & Wonder" },
@@ -61,7 +64,7 @@ const QUOTES_OF_THE_DAY = [
 
 // Application State
 const state = {
-  currentStaff: localStorage.getItem('ygt_staff') || localStorage.getItem('violet_staff') || 'Mr. Jones',
+  currentStaff: localStorage.getItem('ygt_staff') || localStorage.getItem('violet_staff') || 'Mr. Roshan Yadav',
   currentRole: localStorage.getItem('ygt_role') || localStorage.getItem('violet_role') || 'Director / Admin',
   batches: [],
   activeView: 'dashboard',
@@ -74,6 +77,8 @@ const state = {
   pageSize: 50,
   totalStudentsCount: 0,
   attendanceRecords: [],
+  attendanceFilter: 'ALL',
+  attendanceSearchQuery: '',
   currentAttendanceBatch: null,
   currentAttendanceDate: new Date().toISOString().slice(0, 10),
   sideLogEntries: [],
@@ -117,6 +122,9 @@ const elements = {
   sideLogPanel: document.getElementById('sideLogPanel'),
   sideLogBody: document.getElementById('sideLogBody'),
   logBadgeCount: document.getElementById('logBadgeCount'),
+  badgeActivityLogCount: document.getElementById('badgeActivityLogCount'),
+  drawerBadgeLogs: document.getElementById('drawerBadgeLogs'),
+  refreshActivityLogBtn: document.getElementById('refreshActivityLogBtn'),
 
   // Search
   navSearchContainer: document.getElementById('navSearchContainer'),
@@ -154,6 +162,7 @@ const elements = {
   // Tabs & Filters
   tabButtons: document.querySelectorAll('.tab-btn'),
   tabPanes: document.querySelectorAll('.tab-pane'),
+  tabToolsArea: document.getElementById('tabToolsArea'),
   filterBatchSelect: document.getElementById('filterBatchSelect'),
   tabInlineSearchInput: document.getElementById('tabInlineSearchInput'),
 
@@ -166,17 +175,27 @@ const elements = {
   prevPageBtn: document.getElementById('prevPageBtn'),
   nextPageBtn: document.getElementById('nextPageBtn'),
 
-  // Attendance
+  // Attendance Elements (Teacher View & Real-Time Live Summary)
   attendanceBatchSelect: document.getElementById('attendanceBatchSelect'),
   attendanceDatePicker: document.getElementById('attendanceDatePicker'),
+  btnAttendanceSetToday: document.getElementById('btnAttendanceSetToday'),
+  attendanceDateBanner: document.getElementById('attendanceDateBanner'),
+  attStatusDot: document.getElementById('attStatusDot'),
+  attStatusText: document.getElementById('attStatusText'),
   attendanceTableBody: document.getElementById('attendanceTableBody'),
   attTotalEnrolled: document.getElementById('attTotalEnrolled'),
   attPresentCount: document.getElementById('attPresentCount'),
   attAbsentCount: document.getElementById('attAbsentCount'),
   attRatePct: document.getElementById('attRatePct'),
-  btnLoadAttendance: document.getElementById('btnLoadAttendance'),
+  btnSaveCountBadge: document.getElementById('btnSaveCountBadge'),
+  filterCountAll: document.getElementById('filterCountAll'),
+  filterCountPresent: document.getElementById('filterCountPresent'),
+  filterCountAbsent: document.getElementById('filterCountAbsent'),
+  attendanceSearchInput: document.getElementById('attendanceSearchInput'),
+  btnClearAttSearch: document.getElementById('btnClearAttSearch'),
   btnMarkAllPresent: document.getElementById('btnMarkAllPresent'),
   btnMarkAllAbsent: document.getElementById('btnMarkAllAbsent'),
+  btnEditAttendance: document.getElementById('btnEditAttendance'),
   btnSaveAttendance: document.getElementById('btnSaveAttendance'),
 
   // Modals
@@ -271,8 +290,15 @@ function updateGreeting() {
     .toUpperCase();
   elements.currentStaffAvatar.textContent = initials || 'ST';
 
-  const dateOptions = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
-  elements.currentDateStr.textContent = now.toLocaleDateString('en-US', dateOptions);
+  updateStudentBatchSubtitle();
+}
+
+function updateStudentBatchSubtitle() {
+  if (elements.currentDateStr) {
+    const sCount = state.totalStudentsCount ?? (state.dashboardStats ? state.dashboardStats.totalStudents : 11);
+    const bCount = (state.batches && state.batches.length > 0) ? state.batches.length : 10;
+    elements.currentDateStr.textContent = `${sCount} Students. ${bCount} Batches`;
+  }
 }
 
 function setStaff(name, role = 'Staff Member') {
@@ -305,15 +331,57 @@ async function openStaffModal() {
             <div class="staff-pi-role">${escapeHtml(s.role)}</div>
           </div>
         </div>
-        ${isCurrent ? '<span class="text-green font-bold text-sm">✓ Active</span>' : '<button class="btn btn-sm btn-outline">Select</button>'}
+        <div class="staff-pi-actions">
+          ${isCurrent 
+            ? '<span class="text-green font-bold text-sm">✓ Active</span>' 
+            : `<button type="button" class="btn btn-sm btn-outline" onclick="setStaff('${escapeHtml(s.name)}', '${escapeHtml(s.role)}')">Select</button>`}
+          <div class="card-dots-menu-wrap">
+            <button type="button" class="btn-dots-menu" onclick="toggleStaffMenu(event, ${s.id})" title="Staff Options">⋮</button>
+            <div class="dots-dropdown-menu" id="staffMenu-${s.id}">
+              <button type="button" class="dots-menu-item text-danger" onclick="confirmDeleteStaff(event, ${s.id}, '${escapeHtml(s.name)}')">
+                <span>🗑️</span> Delete Staff
+              </button>
+            </div>
+          </div>
+        </div>
       `;
-      item.addEventListener('click', () => setStaff(s.name, s.role));
       container.appendChild(item);
     });
 
     openModal('staffModal');
   } catch (err) {
     showToast('Failed to load staff list: ' + err.message, 'danger');
+  }
+}
+
+function toggleStaffMenu(event, id) {
+  event.stopPropagation();
+  const menu = document.getElementById(`staffMenu-${id}`);
+  if (!menu) return;
+  const isShown = menu.classList.contains('show');
+  document.querySelectorAll('.dots-dropdown-menu.show').forEach(m => m.classList.remove('show'));
+  if (!isShown) menu.classList.add('show');
+}
+
+async function confirmDeleteStaff(event, id, name) {
+  event.stopPropagation();
+  document.querySelectorAll('.dots-dropdown-menu.show').forEach(m => m.classList.remove('show'));
+
+  if (name === state.currentStaff) {
+    alert(`Cannot delete active staff member "${name}". Please switch to another staff member first.`);
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to delete staff member "${name}"?`)) {
+    return;
+  }
+
+  try {
+    await apiFetch(`/api/staff/${id}`, { method: 'DELETE' });
+    showToast(`Staff member "${name}" deleted`, 'success');
+    openStaffModal();
+  } catch (err) {
+    showToast('Failed to delete staff: ' + err.message, 'danger');
   }
 }
 
@@ -434,7 +502,9 @@ function renderSideLogs() {
     filtered = filtered.filter(l => l.action_type.includes('STUDENT') || l.action_type.includes('EXCEL'));
   }
 
-  elements.logBadgeCount.textContent = filtered.length;
+  if (elements.logBadgeCount) elements.logBadgeCount.textContent = filtered.length;
+  if (elements.badgeActivityLogCount) elements.badgeActivityLogCount.textContent = filtered.length;
+  if (elements.drawerBadgeLogs) elements.drawerBadgeLogs.textContent = filtered.length;
 
   if (filtered.length === 0) {
     container.innerHTML = `<div class="text-center text-muted py-8 text-sm">No activity recorded yet</div>`;
@@ -483,6 +553,10 @@ async function refreshDashboard() {
     elements.statBatchCount.textContent = stats.totalBatches;
     elements.statCollectedToday.textContent = formatCurrency(stats.todayCollections);
 
+    state.totalStudentsCount = stats.totalStudents;
+    state.dashboardStats = stats;
+    updateStudentBatchSubtitle();
+
     if (stats.attendanceTodayPct !== null) {
       elements.statAttendancePct.textContent = `${stats.attendanceTodayPct}%`;
       elements.statAttendanceDetail.textContent = `${stats.todayPresent} / ${stats.todayMarked} present`;
@@ -491,9 +565,9 @@ async function refreshDashboard() {
       elements.statAttendanceDetail.textContent = 'Not marked today';
     }
 
-    elements.badgePendingCount.textContent = stats.pendingStudentsCount;
-    elements.badgeTotalStudents.textContent = stats.totalStudents;
-    elements.pendingTabTotalSum.textContent = formatCurrency(stats.totalPending);
+    if (elements.badgePendingCount) elements.badgePendingCount.textContent = stats.pendingStudentsCount;
+    if (elements.badgeTotalStudents) elements.badgeTotalStudents.textContent = stats.totalStudents;
+    if (elements.pendingTabTotalSum) elements.pendingTabTotalSum.textContent = formatCurrency(stats.totalPending);
     if (elements.drawerBadgePending) elements.drawerBadgePending.textContent = stats.pendingStudentsCount;
     if (elements.drawerBadgeStudents) elements.drawerBadgeStudents.textContent = stats.totalStudents;
     if (elements.drawerStaffTag) elements.drawerStaffTag.textContent = `Staff: ${state.currentStaff}`;
@@ -549,7 +623,11 @@ function populateBatchDropdowns() {
       select.appendChild(opt);
     });
 
-    if (currentVal) select.value = currentVal;
+    if (currentVal) {
+      select.value = currentVal;
+    } else if (select === elements.attendanceBatchSelect && state.batches.length > 0) {
+      select.value = state.batches[0].id;
+    }
   });
 }
 
@@ -557,7 +635,7 @@ function populateBatchDropdowns() {
 // 4. FEES PENDING TAB (Requested Centerpiece)
 // ==========================================================
 async function loadPendingFees() {
-  elements.pendingFeesTableBody.innerHTML = `<tr><td colspan="8" class="text-center loading-cell">Loading pending fee records...</td></tr>`;
+  elements.pendingFeesTableBody.innerHTML = `<tr><td colspan="7" class="text-center loading-cell">Loading pending fee records...</td></tr>`;
   try {
     const batchId = elements.filterBatchSelect.value;
     const search = elements.tabInlineSearchInput.value;
@@ -568,7 +646,7 @@ async function loadPendingFees() {
     if (state.pendingStudents.length === 0) {
       elements.pendingFeesTableBody.innerHTML = `
         <tr>
-          <td colspan="8" class="text-center py-8 text-muted">
+          <td colspan="7" class="text-center py-8 text-muted">
             🎉 All students in this selection have cleared their fees! No outstanding balance.
           </td>
         </tr>`;
@@ -579,10 +657,6 @@ async function loadPendingFees() {
     elements.pendingFeesTableBody.innerHTML = state.pendingStudents
       .map(s => {
         runningSum += s.pending_fee;
-        const whatsappMsg = encodeURIComponent(
-          `Dear Parent, this is a friendly reminder from YGT Classes regarding outstanding course fees of ₹${s.pending_fee.toLocaleString('en-IN')} for ${s.name} (${s.batch_name}). Kindly clear the balance at your earliest convenience.`
-        );
-        const cleanPhone = (s.parent_phone || '').replace(/[^0-9]/g, '');
 
         return `
           <tr>
@@ -592,12 +666,6 @@ async function loadPendingFees() {
               <div class="text-xs text-muted">Parent: ${escapeHtml(s.parent_name || 'N/A')}</div>
             </td>
             <td><span class="batch-tag">${escapeHtml(s.batch_code || s.batch_name)}</span></td>
-            <td>
-              <span class="phone-link">
-                ${escapeHtml(s.parent_phone)}
-                ${cleanPhone ? `<a href="https://wa.me/91${cleanPhone}?text=${whatsappMsg}" target="_blank" class="btn-whatsapp-icon" title="Send WhatsApp Fee Reminder">💬</a>` : ''}
-              </span>
-            </td>
             <td>${formatCurrency(s.total_fee)}</td>
             <td class="cell-paid-amt">${formatCurrency(s.fees_paid)}</td>
             <td class="cell-pending-amt">${formatCurrency(s.pending_fee)}</td>
@@ -618,7 +686,7 @@ async function loadPendingFees() {
 
     elements.pendingTabTotalSum.textContent = formatCurrency(runningSum);
   } catch (err) {
-    elements.pendingFeesTableBody.innerHTML = `<tr><td colspan="8" class="text-center text-red">Failed to load pending fees: ${err.message}</td></tr>`;
+    elements.pendingFeesTableBody.innerHTML = `<tr><td colspan="7" class="text-center text-red">Failed to load pending fees: ${err.message}</td></tr>`;
   }
 }
 
@@ -638,8 +706,18 @@ function renderBatchesGrid() {
         <div class="batch-card">
           <div>
             <div class="batch-card-top">
-              <span class="batch-card-code">${escapeHtml(b.code || 'BATCH')}</span>
-              <span class="badge-counter">${b.student_count || 0} Students</span>
+              <div class="batch-card-top-left">
+                <span class="batch-card-code">${escapeHtml(b.code || 'BATCH')}</span>
+                <span class="badge-counter">${b.student_count || 0} Students</span>
+              </div>
+              <div class="card-dots-menu-wrap">
+                <button type="button" class="btn-dots-menu" onclick="toggleBatchMenu(event, ${b.id})" title="Batch Options">⋮</button>
+                <div class="dots-dropdown-menu" id="batchMenu-${b.id}">
+                  <button type="button" class="dots-menu-item text-danger" onclick="confirmDeleteBatch(event, ${b.id}, '${escapeHtml(b.name)}')">
+                    <span>🗑️</span> Delete Batch
+                  </button>
+                </div>
+              </div>
             </div>
             <h4 class="batch-card-title">${escapeHtml(b.name)}</h4>
             <p class="batch-card-schedule">🕒 ${escapeHtml(b.schedule || 'Schedule TBA')}</p>
@@ -667,14 +745,40 @@ function renderBatchesGrid() {
     .join('');
 }
 
+function toggleBatchMenu(event, id) {
+  event.stopPropagation();
+  const menu = document.getElementById(`batchMenu-${id}`);
+  if (!menu) return;
+  const isShown = menu.classList.contains('show');
+  document.querySelectorAll('.dots-dropdown-menu.show').forEach(m => m.classList.remove('show'));
+  if (!isShown) menu.classList.add('show');
+}
+
+async function confirmDeleteBatch(event, id, name) {
+  event.stopPropagation();
+  document.querySelectorAll('.dots-dropdown-menu.show').forEach(m => m.classList.remove('show'));
+
+  if (!confirm(`Are you sure you want to delete Batch "${name}"? Enrolled students will be unlinked from this batch.`)) {
+    return;
+  }
+
+  try {
+    await apiFetch(`/api/batches/${id}`, { method: 'DELETE' });
+    showToast(`Batch "${name}" deleted successfully`, 'success');
+    refreshDashboard();
+  } catch (err) {
+    showToast('Failed to delete batch: ' + err.message, 'danger');
+  }
+}
+
 function filterByBatch(batchId) {
   elements.filterBatchSelect.value = batchId;
-  switchTab('tab-students');
+  switchView('students');
 }
 
 function openAttendanceForBatch(batchId) {
   elements.attendanceBatchSelect.value = batchId;
-  switchTab('tab-attendance');
+  switchView('attendance');
   loadBatchAttendance();
 }
 
@@ -875,50 +979,158 @@ document.addEventListener('click', e => {
 });
 
 // ==========================================================
-// 8. DAILY ATTENDANCE REGISTER
+// 8. ATTENDANCE (TEACHER VIEW - FAST MARKING & LIVE STATS)
 // ==========================================================
 async function loadBatchAttendance() {
-  const batchId = elements.attendanceBatchSelect.value;
-  const date = elements.attendanceDatePicker.value;
+  let batchId = elements.attendanceBatchSelect?.value;
+  if (!batchId && state.batches && state.batches.length > 0) {
+    batchId = state.batches[0].id;
+    if (elements.attendanceBatchSelect) elements.attendanceBatchSelect.value = batchId;
+  }
+  if (!batchId) {
+    try {
+      const batchesRes = await apiFetch('/api/batches');
+      state.batches = batchesRes.batches || [];
+      populateBatchSelects();
+      batchId = state.batches[0]?.id;
+      if (elements.attendanceBatchSelect) elements.attendanceBatchSelect.value = batchId;
+    } catch (_) {}
+  }
+  const date = elements.attendanceDatePicker?.value || new Date().toISOString().slice(0, 10);
   if (!batchId) return;
 
-  elements.attendanceTableBody.innerHTML = `<tr><td colspan="5" class="text-center loading-cell">Loading attendance sheet...</td></tr>`;
+  if (elements.attendanceTableBody) {
+    elements.attendanceTableBody.innerHTML = `<tr><td colspan="2" class="text-center loading-cell">Loading student attendance for ${date}...</td></tr>`;
+  }
 
   try {
     const res = await apiFetch(`/api/attendance?batch_id=${batchId}&date=${date}`);
-    state.attendanceRecords = res.attendance || [];
+    const rawAttendance = res.attendance || [];
+
+    const isToday = date === new Date().toISOString().slice(0, 10);
+    const hasRecorded = rawAttendance.some(r => r.status && r.status !== 'Unmarked');
+
+    if (hasRecorded) {
+      // Attendance ALREADY recorded for this date -> Show Edit button, Hide Save button
+      state.attendanceHasRecorded = true;
+      state.attendanceEditable = false;
+      state.attendanceDirty = false;
+      if (elements.btnEditAttendance) elements.btnEditAttendance.style.display = 'inline-flex';
+      updateSaveButtonVisibility();
+
+      state.attendanceRecords = rawAttendance.map(rec => ({ ...rec }));
+
+      if (elements.attendanceDateBanner && elements.attStatusDot && elements.attStatusText) {
+        elements.attendanceDateBanner.classList.remove('editing-active');
+        elements.attStatusDot.className = 'status-indicator-dot saved';
+        elements.attStatusText.textContent = `✓ Attendance recorded for ${date}. Tap "✏️ Edit Attendance" to make changes.`;
+      }
+    } else {
+      // NEW DAY: No attendance recorded yet -> Hide Edit button, Show Save button
+      state.attendanceHasRecorded = false;
+      state.attendanceEditable = true;
+      state.attendanceDirty = true;
+      if (elements.btnEditAttendance) elements.btnEditAttendance.style.display = 'none';
+      updateSaveButtonVisibility();
+
+      state.attendanceRecords = rawAttendance.map(rec => ({
+        ...rec,
+        status: 'Present'
+      }));
+
+      if (elements.attendanceDateBanner && elements.attStatusDot && elements.attStatusText) {
+        elements.attendanceDateBanner.classList.remove('editing-active');
+        elements.attStatusDot.className = 'status-indicator-dot unsaved';
+        elements.attStatusText.textContent = `📋 New Day: Defaulted to Present. Mark any absentees and tap Save.`;
+      }
+    }
+
     renderAttendanceTable();
+    updateAttendanceStats();
   } catch (err) {
-    elements.attendanceTableBody.innerHTML = `<tr><td colspan="5" class="text-center text-red">Failed to load attendance: ${err.message}</td></tr>`;
+    if (elements.attendanceTableBody) {
+      elements.attendanceTableBody.innerHTML = `<tr><td colspan="2" class="text-center text-red">Failed to load attendance: ${err.message}</td></tr>`;
+    }
   }
 }
 
 function renderAttendanceTable() {
+  if (!elements.attendanceTableBody) return;
+
   if (state.attendanceRecords.length === 0) {
-    elements.attendanceTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-muted">No students enrolled in this batch</td></tr>`;
+    elements.attendanceTableBody.innerHTML = `
+      <tr>
+        <td colspan="2">
+          <div class="empty-att-state">
+            <span class="empty-att-icon">📋</span>
+            <div class="empty-att-title">No Students Enrolled</div>
+            <p class="empty-att-desc">There are no active students in this batch yet. Enroll students or import batch Excel.</p>
+          </div>
+        </td>
+      </tr>
+    `;
     updateAttendanceStats();
     return;
   }
 
-  elements.attendanceTableBody.innerHTML = state.attendanceRecords
-    .map((rec, idx) => {
-      const cleanPhone = (rec.parent_phone || '').replace(/[^0-9]/g, '');
+  // Filter records
+  const query = (state.attendanceSearchQuery || '').toLowerCase().trim();
+  const filter = state.attendanceFilter || 'ALL';
+
+  const visibleRecords = state.attendanceRecords.filter(rec => {
+    // 1. Search Query
+    if (query) {
+      const matchName = (rec.name || '').toLowerCase().includes(query);
+      if (!matchName) return false;
+    }
+    // 2. Filter Chip
+    if (filter === 'PRESENT' && rec.status !== 'Present') return false;
+    if (filter === 'ABSENT' && rec.status !== 'Absent') return false;
+    return true;
+  });
+
+  if (visibleRecords.length === 0) {
+    elements.attendanceTableBody.innerHTML = `
+      <tr>
+        <td colspan="2">
+          <div class="empty-att-state">
+            <span class="empty-att-icon">🔍</span>
+            <div class="empty-att-title">No matching students</div>
+            <p class="empty-att-desc">${query ? `No student found matching "${escapeHtml(query)}"` : `No students marked as ${filter.toLowerCase()}`}</p>
+          </div>
+        </td>
+      </tr>
+    `;
+    updateAttendanceStats();
+    return;
+  }
+
+  elements.attendanceTableBody.innerHTML = visibleRecords
+    .map(rec => {
       const status = rec.status || 'Present';
+      const isAbsent = status === 'Absent';
+      const isPresent = status === 'Present';
 
       return `
-        <tr>
-          <td class="cell-roll">${escapeHtml(rec.roll_no)}</td>
-          <td class="cell-student-name">${escapeHtml(rec.name)}</td>
-          <td>${escapeHtml(rec.parent_phone)}</td>
-          <td>
-            <div class="att-toggle-group">
-              <button type="button" class="att-btn present ${status === 'Present' ? 'active' : ''}" onclick="setAttendanceStatus(${idx}, 'Present')">✓ Present</button>
-              <button type="button" class="att-btn absent ${status === 'Absent' ? 'active' : ''}" onclick="setAttendanceStatus(${idx}, 'Absent')">✕ Absent</button>
-              <button type="button" class="att-btn late ${status === 'Late' ? 'active' : ''}" onclick="setAttendanceStatus(${idx}, 'Late')">⏱ Late</button>
-            </div>
+        <tr class="${isAbsent ? 'row-absent-highlight' : ''}" data-student-id="${rec.student_id}">
+          <td class="cell-student-name font-medium">
+            <div class="student-name-main">${escapeHtml(rec.name)}</div>
           </td>
-          <td>
-            ${cleanPhone ? `<a href="https://wa.me/91${cleanPhone}?text=${encodeURIComponent('Dear Parent, your ward ' + rec.name + ' was marked ' + status + ' today at YGT Classes.')}" target="_blank" class="btn-whatsapp-icon" title="Notify Parent on WhatsApp">💬</a>` : ''}
+          <td style="text-align: right; width: 180px;">
+            <div class="one-tap-att-group">
+              <button type="button" 
+                      class="btn-one-tap present ${isPresent ? 'active' : ''}" 
+                      onclick="toggleAttendance(${rec.student_id}, 'Present')"
+                      aria-label="Mark Present">
+                <span>✓</span> Present
+              </button>
+              <button type="button" 
+                      class="btn-one-tap absent ${isAbsent ? 'active' : ''}" 
+                      onclick="toggleAttendance(${rec.student_id}, 'Absent')"
+                      aria-label="Mark Absent">
+                <span>✕</span> Absent
+              </button>
+            </div>
           </td>
         </tr>
       `;
@@ -928,11 +1140,37 @@ function renderAttendanceTable() {
   updateAttendanceStats();
 }
 
-window.setAttendanceStatus = function(idx, status) {
-  if (state.attendanceRecords[idx]) {
-    state.attendanceRecords[idx].status = status;
+// Instant One-Tap Toggle with zero lag
+window.toggleAttendance = function(studentId, targetStatus) {
+  const rec = state.attendanceRecords.find(r => r.student_id === studentId);
+  if (!rec) return;
+
+  state.attendanceEditable = true;
+  state.attendanceDirty = true;
+  updateSaveButtonVisibility();
+
+  // Toggle or set
+  rec.status = targetStatus;
+
+  // Optimistic UI update: update the row's buttons directly
+  const row = document.querySelector(`tr[data-student-id="${studentId}"]`);
+  if (row) {
+    row.classList.toggle('row-absent-highlight', rec.status === 'Absent');
+    const btnPresent = row.querySelector('.btn-one-tap.present');
+    const btnAbsent = row.querySelector('.btn-one-tap.absent');
+    if (btnPresent && btnAbsent) {
+      btnPresent.classList.toggle('active', rec.status === 'Present');
+      btnAbsent.classList.toggle('active', rec.status === 'Absent');
+    }
+  }
+
+  // If a filter like 'PRESENT' or 'ABSENT' is active, re-render to reflect filtered view
+  if (state.attendanceFilter !== 'ALL') {
     renderAttendanceTable();
   }
+
+  // Update live counters instantly
+  updateAttendanceStats();
 };
 
 function updateAttendanceStats() {
@@ -941,41 +1179,132 @@ function updateAttendanceStats() {
   const absent = state.attendanceRecords.filter(r => r.status === 'Absent').length;
   const pct = total > 0 ? Math.round((present / total) * 100) : 0;
 
-  elements.attTotalEnrolled.textContent = total;
-  elements.attPresentCount.textContent = present;
-  elements.attAbsentCount.textContent = absent;
-  elements.attRatePct.textContent = `${pct}%`;
+  // Top Live Summary Card
+  if (elements.attTotalEnrolled) elements.attTotalEnrolled.textContent = total;
+  if (elements.attPresentCount) elements.attPresentCount.textContent = present;
+  if (elements.attAbsentCount) elements.attAbsentCount.textContent = absent;
+  if (elements.attRatePct) elements.attRatePct.textContent = `${pct}%`;
+
+  // Filter Chips Count
+  if (elements.filterCountAll) elements.filterCountAll.textContent = total;
+  if (elements.filterCountPresent) elements.filterCountPresent.textContent = present;
+  if (elements.filterCountAbsent) elements.filterCountAbsent.textContent = absent;
 }
 
-elements.btnMarkAllPresent.addEventListener('click', () => {
+document.getElementById('btnMarkAllPresent')?.addEventListener('click', () => {
+  state.attendanceEditable = true;
+  state.attendanceDirty = true;
+  updateSaveButtonVisibility();
   state.attendanceRecords.forEach(r => (r.status = 'Present'));
   renderAttendanceTable();
-  showToast('Marked all students as Present', 'info');
+  updateAttendanceStats();
+  document.getElementById('attDotsDropdown')?.classList.remove('show');
+  showToast('✓ All students marked Present', 'info');
 });
 
-elements.btnMarkAllAbsent.addEventListener('click', () => {
+document.getElementById('btnMarkAllAbsent')?.addEventListener('click', () => {
+  state.attendanceEditable = true;
+  state.attendanceDirty = true;
+  updateSaveButtonVisibility();
   state.attendanceRecords.forEach(r => (r.status = 'Absent'));
   renderAttendanceTable();
-  showToast('Marked all students as Absent', 'warning');
+  updateAttendanceStats();
+  document.getElementById('attDotsDropdown')?.classList.remove('show');
+  showToast('✕ All students marked Absent', 'warning');
 });
 
-elements.btnSaveAttendance.addEventListener('click', async () => {
-  const batchId = elements.attendanceBatchSelect.value;
-  const date = elements.attendanceDatePicker.value;
-  if (!batchId || !date) return showToast('Please select batch and date', 'warning');
+if (elements.btnSaveAttendance) {
+  elements.btnSaveAttendance.addEventListener('click', async () => {
+    const batchId = elements.attendanceBatchSelect?.value;
+    const date = elements.attendanceDatePicker?.value;
+    if (!batchId || !date) return showToast('Please select batch and date', 'warning');
 
-  try {
-    const payload = {
-      batch_id: batchId,
-      date,
-      records: state.attendanceRecords.map(r => ({ student_id: r.student_id, status: r.status }))
-    };
-    await apiFetch('/api/attendance', { method: 'POST', body: JSON.stringify(payload) });
-    showToast(`Saved attendance for ${state.attendanceRecords.length} students!`, 'success');
-  } catch (err) {
-    showToast('Failed to save attendance: ' + err.message, 'danger');
+    const total = state.attendanceRecords.length;
+    const present = state.attendanceRecords.filter(r => r.status === 'Present').length;
+    const absent = state.attendanceRecords.filter(r => r.status === 'Absent').length;
+
+    try {
+      elements.btnSaveAttendance.disabled = true;
+      elements.btnSaveAttendance.innerHTML = `<span>Saving...</span>`;
+
+      const payload = {
+        batch_id: batchId,
+        date,
+        records: state.attendanceRecords.map(r => ({ student_id: r.student_id, status: r.status }))
+      };
+      await apiFetch('/api/attendance', { method: 'POST', body: JSON.stringify(payload) });
+
+      showToast(`✅ Saved Attendance: ${present} Present, ${absent} Absent!`, 'success');
+
+      state.attendanceDirty = false;
+      state.attendanceEditable = false;
+      state.attendanceHasRecorded = true;
+      if (elements.btnEditAttendance) elements.btnEditAttendance.style.display = 'inline-flex';
+      updateSaveButtonVisibility();
+
+      if (elements.attendanceDateBanner && elements.attStatusDot && elements.attStatusText) {
+        elements.attendanceDateBanner.classList.remove('editing-active');
+        elements.attStatusDot.className = 'status-indicator-dot saved';
+        elements.attStatusText.textContent = `✓ Attendance saved successfully for ${date} (${present} Present, ${absent} Absent).`;
+      }
+
+      refreshDashboard();
+    } catch (err) {
+      showToast('Failed to save attendance: ' + err.message, 'danger');
+    } finally {
+      if (elements.btnSaveAttendance) {
+        elements.btnSaveAttendance.disabled = false;
+        elements.btnSaveAttendance.innerHTML = `<span>💾 Save</span>`;
+      }
+    }
+  });
+}
+
+// Attendance Edit Button
+if (elements.btnEditAttendance) {
+  elements.btnEditAttendance.addEventListener('click', () => {
+    state.attendanceEditable = true;
+    state.attendanceDirty = true;
+    updateSaveButtonVisibility();
+    if (elements.attendanceDateBanner) {
+      elements.attendanceDateBanner.classList.add('editing-active');
+    }
+    if (elements.attStatusDot && elements.attStatusText) {
+      elements.attStatusDot.className = 'status-indicator-dot unsaved';
+      elements.attStatusText.textContent = `✏️ Attendance Edit Mode: Change student statuses below and tap Save at bottom right.`;
+    }
+    showToast('✏️ Edit mode active. Tap on students to change status, then tap Save.', 'info');
+  });
+}
+
+// 3-Dots Bulk Attendance Menu Toggle
+window.toggleAttMenu = function(event) {
+  event.stopPropagation();
+  const menu = document.getElementById('attDotsDropdown');
+  if (!menu) return;
+  const isShown = menu.classList.contains('show');
+  document.querySelectorAll('.dots-dropdown-menu.show').forEach(m => m.classList.remove('show'));
+  if (!isShown) menu.classList.add('show');
+};
+
+function updateSaveButtonVisibility() {
+  if (!elements.btnSaveAttendance) return;
+  const shouldShow = (state.activeTab === 'tab-attendance') && !!state.attendanceDirty;
+  elements.btnSaveAttendance.style.display = shouldShow ? 'inline-flex' : 'none';
+}
+
+// Dismiss any open 3-dots menus on clicking outside
+window.addEventListener('click', (e) => {
+  if (!e.target.closest('.card-dots-menu-wrap')) {
+    document.querySelectorAll('.dots-dropdown-menu.show').forEach(m => m.classList.remove('show'));
   }
 });
+
+// Expose 3-dots helpers to global window scope
+window.toggleStaffMenu = toggleStaffMenu;
+window.confirmDeleteStaff = confirmDeleteStaff;
+window.toggleBatchMenu = toggleBatchMenu;
+window.confirmDeleteBatch = confirmDeleteBatch;
 
 // ==========================================================
 // 9. EXCEL & CSV DIRECT UPLOAD STUDIO
@@ -1303,6 +1632,7 @@ function switchView(viewName) {
   });
 
   if (isDashboard) {
+    updateSaveButtonVisibility();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
   }
@@ -1311,32 +1641,53 @@ function switchView(viewName) {
   else if (viewName === 'batches') switchTab('tab-batches');
   else if (viewName === 'students') switchTab('tab-students');
   else if (viewName === 'attendance') switchTab('tab-attendance');
+  else if (viewName === 'activity-log') switchTab('tab-activity-log');
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function switchTab(tabId) {
   state.activeTab = tabId;
-  elements.tabButtons.forEach(btn => {
-    btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
-  });
+  if (elements.tabButtons && elements.tabButtons.length > 0) {
+    elements.tabButtons.forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
+    });
+  }
   elements.tabPanes.forEach(pane => {
-    pane.classList.toggle('active', pane.id === tabId);
+    const isActive = pane.id === tabId;
+    pane.classList.toggle('active', isActive);
+    pane.style.display = isActive ? 'block' : 'none';
   });
 
+  // Table filter tools (Batch selector & quick search): display only on Fees and All Students Directory
+  if (elements.tabToolsArea) {
+    elements.tabToolsArea.style.display = (tabId === 'tab-pending-fees' || tabId === 'tab-students') ? 'flex' : 'none';
+  }
+
   if (tabId === 'tab-pending-fees') {
-    if (elements.activeViewTitle) elements.activeViewTitle.textContent = '💰 Fees Pending Register';
+    if (elements.activeViewTitle) elements.activeViewTitle.textContent = '💰 Fees';
     loadPendingFees();
   } else if (tabId === 'tab-batches') {
-    if (elements.activeViewTitle) elements.activeViewTitle.textContent = '🎓 Batches Management (10 Batches)';
+    if (elements.activeViewTitle) elements.activeViewTitle.textContent = '🎓 Batch';
     renderBatchesGrid();
   } else if (tabId === 'tab-students') {
     if (elements.activeViewTitle) elements.activeViewTitle.textContent = '👥 All Students Directory';
     loadAllStudents();
   } else if (tabId === 'tab-attendance') {
-    if (elements.activeViewTitle) elements.activeViewTitle.textContent = '📋 Daily Attendance Register';
+    if (elements.activeViewTitle) elements.activeViewTitle.textContent = '📋 Attendance';
+    if (elements.attendanceDatePicker && !elements.attendanceDatePicker.value) {
+      elements.attendanceDatePicker.value = new Date().toISOString().slice(0, 10);
+    }
+    if (elements.attendanceBatchSelect && !elements.attendanceBatchSelect.value && state.batches.length > 0) {
+      elements.attendanceBatchSelect.value = state.batches[0].id;
+    }
     loadBatchAttendance();
+  } else if (tabId === 'tab-activity-log') {
+    if (elements.activeViewTitle) elements.activeViewTitle.textContent = '⚡ Live Activity Log';
+    loadSideLogs();
   }
+
+  updateSaveButtonVisibility();
 }
 
 elements.tabButtons.forEach(btn => {
@@ -1406,17 +1757,21 @@ document.getElementById('drawerOpenStaffBtn').addEventListener('click', () => {
   toggleDrawer(false);
   openStaffModal();
 });
-document.getElementById('drawerOpenSideLogBtn').addEventListener('click', () => {
+document.getElementById('drawerOpenSideLogBtn')?.addEventListener('click', () => {
   toggleDrawer(false);
-  elements.sideLogPanel.classList.add('open');
+  switchView('activity-log');
 });
 
-// Side Log Panel Toggle
-elements.toggleSideLogBtn.addEventListener('click', () => {
-  elements.sideLogPanel.classList.toggle('open');
+// Side Log Panel Toggle (if present)
+elements.toggleSideLogBtn?.addEventListener('click', () => {
+  elements.sideLogPanel?.classList.toggle('open');
 });
-elements.closeSideLogBtn.addEventListener('click', () => {
-  elements.sideLogPanel.classList.remove('open');
+elements.closeSideLogBtn?.addEventListener('click', () => {
+  elements.sideLogPanel?.classList.remove('open');
+});
+elements.refreshActivityLogBtn?.addEventListener('click', () => {
+  loadSideLogs();
+  showToast('⚡ Activity stream refreshed', 'info');
 });
 
 // Side Log Filter Chips
@@ -1430,8 +1785,8 @@ document.querySelectorAll('.log-filter-chip').forEach(chip => {
 });
 
 // Hero & Card Action Buttons
-document.getElementById('openUploadModalBtn').addEventListener('click', () => openModal('uploadModal'));
-document.getElementById('quickSampleCsvBtn').addEventListener('click', () => {
+document.getElementById('openUploadModalBtn')?.addEventListener('click', () => openModal('uploadModal'));
+document.getElementById('quickSampleCsvBtn')?.addEventListener('click', () => {
   window.location.href = '/api/sample-csv';
 });
 document.getElementById('jumpToPendingTabBtn').addEventListener('click', () => switchView('pending-fees'));
@@ -1439,7 +1794,7 @@ document.getElementById('jumpToAttendanceBtn').addEventListener('click', () => s
 document.getElementById('quickAddStudentBtn').addEventListener('click', () => openNewStudentModal());
 document.getElementById('btnDirectoryAddStudent').addEventListener('click', () => openNewStudentModal());
 document.getElementById('btnCreateNewBatch').addEventListener('click', () => openModal('batchModal'));
-document.getElementById('openSideLogSummaryBtn').addEventListener('click', () => elements.sideLogPanel.classList.add('open'));
+document.getElementById('openSideLogSummaryBtn')?.addEventListener('click', () => switchView('activity-log'));
 elements.staffProfileBtn.addEventListener('click', () => openStaffModal());
 
 function openNewStudentModal() {
@@ -1504,9 +1859,41 @@ document.getElementById('addStaffForm').addEventListener('submit', async e => {
 });
 
 // Attendance Controls
-elements.btnLoadAttendance.addEventListener('click', () => loadBatchAttendance());
-elements.attendanceBatchSelect.addEventListener('change', () => loadBatchAttendance());
-elements.attendanceDatePicker.addEventListener('change', () => loadBatchAttendance());
+elements.btnLoadAttendance?.addEventListener('click', () => loadBatchAttendance());
+elements.attendanceBatchSelect?.addEventListener('change', () => loadBatchAttendance());
+elements.attendanceDatePicker?.addEventListener('change', () => loadBatchAttendance());
+elements.btnAttendanceSetToday?.addEventListener('click', () => {
+  if (elements.attendanceDatePicker) {
+    elements.attendanceDatePicker.value = new Date().toISOString().slice(0, 10);
+    loadBatchAttendance();
+  }
+});
+
+// Attendance Filter Chips
+document.querySelectorAll('.att-filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.att-filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    state.attendanceFilter = chip.getAttribute('data-att-filter') || 'ALL';
+    renderAttendanceTable();
+  });
+});
+
+// Attendance Search Input
+elements.attendanceSearchInput?.addEventListener('input', e => {
+  state.attendanceSearchQuery = e.target.value;
+  if (elements.btnClearAttSearch) {
+    elements.btnClearAttSearch.style.display = e.target.value ? 'block' : 'none';
+  }
+  renderAttendanceTable();
+});
+
+elements.btnClearAttSearch?.addEventListener('click', () => {
+  if (elements.attendanceSearchInput) elements.attendanceSearchInput.value = '';
+  state.attendanceSearchQuery = '';
+  if (elements.btnClearAttSearch) elements.btnClearAttSearch.style.display = 'none';
+  renderAttendanceTable();
+});
 
 // Export Pending CSV
 document.getElementById('exportPendingCsvBtn').addEventListener('click', () => {
@@ -1653,12 +2040,10 @@ function initSplashScreen() {
   const currentQuote = QUOTES_OF_THE_DAY[state.currentQuoteIndex] || QUOTES_OF_THE_DAY[0];
   displayQuote(currentQuote);
 
-  // Splash thought button
-  if (elements.splashNewThoughtBtn) {
-    elements.splashNewThoughtBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      displayQuote(getNextQuote());
-    });
+  const splashEl = document.getElementById('appSplashScreen');
+  if (splashEl) {
+    // Tap to dismiss immediately if user prefers
+    splashEl.addEventListener('click', () => dismissSplashScreen(0));
   }
 
   // Dashboard refresh thought button
@@ -1668,39 +2053,41 @@ function initSplashScreen() {
       showToast('New Thought of the Day loaded!', 'info');
     });
   }
-
-  // Skip button
-  if (elements.splashSkipBtn) {
-    elements.splashSkipBtn.addEventListener('click', () => {
-      dismissSplashScreen();
-    });
-  }
-
-  // Smooth progress bar steps
-  if (elements.splashProgressBar) {
-    elements.splashProgressBar.style.width = '35%';
-    setTimeout(() => {
-      if (elements.splashProgressBar) elements.splashProgressBar.style.width = '75%';
-      if (elements.splashStatusText) elements.splashStatusText.textContent = 'Loading batches, student dues & attendance registers...';
-    }, 500);
-  }
 }
 
 let splashDismissed = false;
-function dismissSplashScreen() {
+function dismissSplashScreen(minDuration = 800) {
   if (splashDismissed) return;
   splashDismissed = true;
-  if (elements.splashProgressBar) elements.splashProgressBar.style.width = '100%';
-  if (elements.splashStatusText) elements.splashStatusText.textContent = 'Welcome to YGT Classes!';
+
+  const splashEl = document.getElementById('appSplashScreen');
+  if (!splashEl) return;
+
+  if (elements.splashStatusText) {
+    elements.splashStatusText.textContent = 'Ready! Opening dashboard...';
+  }
+
+  const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  const elapsed = now - splashStartTime;
+  const remainingDelay = Math.max(0, minDuration - elapsed);
 
   setTimeout(() => {
-    if (elements.appSplashScreen) {
-      elements.appSplashScreen.classList.add('hidden');
-      setTimeout(() => {
-        elements.appSplashScreen.style.display = 'none';
-      }, 550);
-    }
-  }, 400);
+    // Smooth 60fps GPU exit: fade-out + slight scale-up reveal
+    splashEl.classList.add('splash-dismissing');
+
+    let cleanedUp = false;
+    const cleanupSplash = () => {
+      if (cleanedUp) return;
+      cleanedUp = true;
+      if (splashEl && splashEl.parentNode) {
+        splashEl.parentNode.removeChild(splashEl);
+      }
+    };
+
+    splashEl.addEventListener('transitionend', cleanupSplash, { once: true });
+    // Safety fallback in case transitionend does not fire
+    setTimeout(cleanupSplash, 500);
+  }, remainingDelay);
 }
 
 // ==========================================================
@@ -1803,9 +2190,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     console.warn('Initial load warning:', err);
   } finally {
-    // Ensure splash quote is visible for at least 1500ms so user can enjoy reading it
-    const elapsed = Date.now() - startTime;
-    const remainingDelay = Math.max(0, 1500 - elapsed);
-    setTimeout(dismissSplashScreen, remainingDelay);
+    // Minimum display safety threshold (~800ms) so animation finishes smoothly without abrupt cutoff
+    dismissSplashScreen(800);
   }
 });
