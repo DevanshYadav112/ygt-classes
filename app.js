@@ -2091,90 +2091,14 @@ function dismissSplashScreen(minDuration = 800) {
 }
 
 // ==========================================================
-// 15. LIVE MOBILE PHONE SIMULATOR
-// ==========================================================
-function initDeviceSimulator() {
-  const btnModeDesktop = document.getElementById('btnPreviewDesktop');
-  const btnModeMobile = document.getElementById('btnPreviewMobile');
-  const headerToggleBtn = document.getElementById('headerSimulatorToggleBtn');
-  const deviceToggleIcon = document.getElementById('deviceToggleIcon');
-  const deviceToggleText = document.getElementById('deviceToggleText');
-  const dockPresetGroup = document.getElementById('dockPresetGroup');
-  const smartphoneFrame = document.getElementById('smartphoneFrame');
-  const simStatusTime = document.getElementById('simStatusTime');
-
-  function updateSimTime() {
-    if (simStatusTime) {
-      const now = new Date();
-      simStatusTime.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-  }
-  updateSimTime();
-  setInterval(updateSimTime, 30000);
-
-  function setMode(mode) {
-    if (mode === 'mobile') {
-      document.body.classList.add('mobile-simulator-active');
-      if (btnModeMobile) btnModeMobile.classList.add('active');
-      if (btnModeDesktop) btnModeDesktop.classList.remove('active');
-      if (headerToggleBtn) headerToggleBtn.classList.add('active');
-      if (deviceToggleIcon) deviceToggleIcon.textContent = '💻';
-      if (deviceToggleText) deviceToggleText.textContent = 'Desktop';
-      if (dockPresetGroup) dockPresetGroup.style.display = 'flex';
-      localStorage.setItem('ygt_device_mode', 'mobile');
-    } else {
-      document.body.classList.remove('mobile-simulator-active');
-      if (btnModeDesktop) btnModeDesktop.classList.add('active');
-      if (btnModeMobile) btnModeMobile.classList.remove('active');
-      if (headerToggleBtn) headerToggleBtn.classList.remove('active');
-      if (deviceToggleIcon) deviceToggleIcon.textContent = '📱';
-      if (deviceToggleText) deviceToggleText.textContent = 'Phone View';
-      if (dockPresetGroup) dockPresetGroup.style.display = 'none';
-      localStorage.setItem('ygt_device_mode', 'desktop');
-    }
-  }
-
-  if (btnModeDesktop) {
-    btnModeDesktop.addEventListener('click', () => setMode('desktop'));
-  }
-  if (btnModeMobile) {
-    btnModeMobile.addEventListener('click', () => setMode('mobile'));
-  }
-  if (headerToggleBtn) {
-    headerToggleBtn.addEventListener('click', () => {
-      const isMobile = document.body.classList.contains('mobile-simulator-active');
-      setMode(isMobile ? 'desktop' : 'mobile');
-    });
-  }
-
-  // Device Presets
-  document.querySelectorAll('.dock-preset-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      document.querySelectorAll('.dock-preset-chip').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      const width = chip.getAttribute('data-width');
-      const height = chip.getAttribute('data-height');
-      if (smartphoneFrame) {
-        smartphoneFrame.style.width = width + 'px';
-        smartphoneFrame.style.height = height + 'px';
-      }
-    });
-  });
-
-  // Load saved preference
-  const savedMode = localStorage.getItem('ygt_device_mode') || 'desktop';
-  if (savedMode === 'mobile') {
-    setMode('mobile');
-  }
-}
-
-// ==========================================================
-// 16. INITIALIZATION
+// 15. INITIALIZATION
 // ==========================================================
 window.addEventListener('DOMContentLoaded', async () => {
+  localStorage.removeItem('ygt_device_mode');
+  document.body.classList.remove('mobile-simulator-active');
+
   initTheme();
   initSplashScreen();
-  initDeviceSimulator();
 
   elements.attendanceDatePicker.value = state.currentAttendanceDate;
   updateGreeting();
