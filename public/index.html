@@ -438,7 +438,7 @@
               <span class="drawer-icon">🎓</span> 
               <span>Batch</span>
             </div>
-            <span class="drawer-badge-pill blue">10</span>
+            <span class="badge-counter badge-blue drawer-badge" id="drawerBadgeBatches">0</span>
           </a>
         </li>
         <li>
@@ -565,9 +565,9 @@
           </div>
           <div class="stat-number-row">
             <span class="stat-value" id="statTotalStudents">0</span>
-            <span class="stat-unit">across <span id="statBatchCount">10</span> batches</span>
+            <span class="stat-unit">across <span id="statBatchCount">0</span> batches</span>
           </div>
-          <p class="stat-desc">~200 students per batch capacity</p>
+          <p class="stat-desc">Enrolled student distribution</p>
           <div class="stat-card-footer">
             <button class="card-action-link" id="quickAddStudentBtn">+ Enroll New Student</button>
           </div>
@@ -1198,7 +1198,7 @@
         <div class="modal-body">
           <div class="form-group">
             <label for="newBatchName">Batch Name: *</label>
-            <input type="text" id="newBatchName" class="form-input" required placeholder="e.g. Batch 11 - Class 10 Foundation">
+            <input type="text" id="newBatchName" class="form-input" required placeholder="e.g. Class 11 JEE, Class 10 Science">
           </div>
           <div class="form-group">
             <label for="newBatchCode">Batch Code:</label>
@@ -1247,7 +1247,7 @@
           <div><span>Date & Time:</span> <strong id="rcptDate">28-10-2026 8:45 PM</strong></div>
           <div><span>Student Name:</span> <strong id="rcptStudentName">Rahul Sharma</strong></div>
           <div><span>Roll No:</span> <strong id="rcptRollNo">-</strong></div>
-          <div><span>Batch:</span> <strong id="rcptBatch">Batch 1 - Class 11 JEE</strong></div>
+          <div><span>Batch:</span> <strong id="rcptBatch">-</strong></div>
           <div><span>Parent Phone:</span> <strong id="rcptPhone">9876543210</strong></div>
         </div>
 

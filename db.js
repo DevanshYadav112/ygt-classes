@@ -33,11 +33,11 @@ function initDb(dbFilePath) {
 
     CREATE TABLE IF NOT EXISTS students (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      roll_no TEXT UNIQUE NOT NULL,
+      roll_no TEXT NOT NULL,
       name TEXT NOT NULL,
       batch_id INTEGER NOT NULL REFERENCES batches(id) ON DELETE CASCADE,
       parent_name TEXT,
-      parent_phone TEXT NOT NULL,
+      parent_phone TEXT,
       student_phone TEXT,
       email TEXT,
       address TEXT,
@@ -47,7 +47,8 @@ function initDb(dbFilePath) {
       status TEXT DEFAULT 'Active',
       notes TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(batch_id, roll_no)
     );
 
     CREATE TABLE IF NOT EXISTS attendance (
@@ -205,11 +206,11 @@ function initDb(dbFilePath) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const info = stmt.run(
-        data.roll_no,
+        data.roll_no ? data.roll_no.toString() : '',
         data.name,
         Number(data.batch_id),
         data.parent_name || '',
-        data.parent_phone,
+        data.parent_phone || '',
         data.student_phone || '',
         data.email || '',
         data.address || '',
@@ -264,7 +265,7 @@ function initDb(dbFilePath) {
         data.roll_no,
         Number(data.batch_id),
         data.parent_name || '',
-        data.parent_phone,
+        data.parent_phone || '',
         data.student_phone || '',
         data.email || '',
         data.address || '',
@@ -374,7 +375,7 @@ function initDb(dbFilePath) {
 
       const checkBatchStmt = db.prepare('SELECT id FROM batches WHERE name = ? COLLATE NOCASE');
       const createBatchStmt = db.prepare('INSERT INTO batches (name, default_fee) VALUES (?, ?)');
-      const checkStudentStmt = db.prepare('SELECT id, total_fee, fees_paid FROM students WHERE roll_no = ?');
+      const checkStudentStmt = db.prepare('SELECT id, total_fee, fees_paid FROM students WHERE roll_no = ? AND batch_id = ?');
       const insertStmt = db.prepare(`
         INSERT INTO students (roll_no, name, batch_id, parent_name, parent_phone, student_phone, email, total_fee, fees_paid, notes)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -402,7 +403,7 @@ function initDb(dbFilePath) {
           }
         }
 
-        const existingStudent = checkStudentStmt.get(item.roll_no.toString().trim());
+        const existingStudent = checkStudentStmt.get(item.roll_no.toString().trim(), Number(targetBatchId));
         const totalFee = Number(item.total_fee) || 0;
         const feesPaid = Number(item.fees_paid) || 0;
 

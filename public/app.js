@@ -157,6 +157,7 @@ const elements = {
   hintOpenDrawerBtn: document.getElementById('hintOpenDrawerBtn'),
   drawerBadgePending: document.getElementById('drawerBadgePending'),
   drawerBadgeStudents: document.getElementById('drawerBadgeStudents'),
+  drawerBadgeBatches: document.getElementById('drawerBadgeBatches'),
   drawerStaffTag: document.getElementById('drawerStaffTag'),
 
   // Tabs & Filters
@@ -570,6 +571,7 @@ async function refreshDashboard() {
     if (elements.pendingTabTotalSum) elements.pendingTabTotalSum.textContent = formatCurrency(stats.totalPending);
     if (elements.drawerBadgePending) elements.drawerBadgePending.textContent = stats.pendingStudentsCount;
     if (elements.drawerBadgeStudents) elements.drawerBadgeStudents.textContent = stats.totalStudents;
+    if (elements.drawerBadgeBatches) elements.drawerBadgeBatches.textContent = stats.totalBatches ?? (state.batches ? state.batches.length : 0);
     if (elements.drawerStaffTag) elements.drawerStaffTag.textContent = `Staff: ${state.currentStaff}`;
 
     // Populate batch selects
@@ -694,6 +696,9 @@ async function loadPendingFees() {
 // 5. BATCHES GRID VIEW
 // ==========================================================
 function renderBatchesGrid() {
+  if (elements.drawerBadgeBatches) {
+    elements.drawerBadgeBatches.textContent = state.batches ? state.batches.length : 0;
+  }
   const container = elements.batchesGridContainer;
   if (!state.batches || state.batches.length === 0) {
     container.innerHTML = `<div class="text-center text-muted py-8">No batches found</div>`;

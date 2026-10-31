@@ -161,8 +161,8 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/students' && req.method === 'POST') {
       const body = await parseJsonBody(req);
-      if (!body.name || !body.roll_no || !body.batch_id || !body.parent_phone) {
-        return sendJson(res, 400, { error: 'Name, Roll No, Batch, and Parent Phone are required' });
+      if (!body.name || !body.roll_no || !body.batch_id) {
+        return sendJson(res, 400, { error: 'Name, Roll No, and Batch are required' });
       }
       try {
         const studentId = db.createStudent(body, staffName);
