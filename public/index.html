@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>YGT Classes - Staff Database & Operations Suite</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0b1120">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Animated Splash & Loading Screen with "Thought of the Day" -->
+  <div id="appSplashScreen" class="app-splash-screen">
+    <div class="splash-backdrop-glow"></div>
+    <div class="splash-content">
+      <!-- Cartoon Science Teacher & Atom Animation -->
+      <div class="splash-character-scene">
+        <div class="splash-atom-orbit">
+          <div class="atom-ring ring-1"></div>
+          <div class="atom-ring ring-2"></div>
+          <div class="atom-ring ring-3"></div>
+        </div>
+        <div class="splash-avatar-badge">
+          <div class="splash-avatar-inner">
+            <!-- Cartoon Teacher / Scientist Vector -->
+            <svg width="84" height="84" viewBox="0 0 100 100" fill="none" class="anim-teacher-float">
+              <!-- Glow -->
+              <circle cx="50" cy="50" r="42" fill="#1e1b4b" />
+              <!-- Lab Coat / Suit Body -->
+              <path d="M 28 88 C 28 68, 38 64, 50 64 C 62 64, 72 68, 72 88 Z" fill="#ffffff" />
+              <path d="M 44 64 L 50 78 L 56 64 Z" fill="#6366f1" />
+              <path d="M 48 78 L 50 88 L 52 78 Z" fill="#ec4899" />
+              <!-- Head & Neck -->
+              <rect x="44" y="55" width="12" height="12" fill="#ffd1b3" rx="4" />
+              <circle cx="50" cy="42" r="18" fill="#ffd1b3" />
+              <!-- Hair -->
+              <path d="M 32 38 C 32 25, 42 22, 50 22 C 58 22, 68 25, 68 38 C 65 32, 58 28, 50 28 C 42 28, 35 32, 32 38 Z" fill="#475569" />
+              <!-- Spectacles (Round nerdy science glasses) -->
+              <circle cx="43" cy="42" r="6" stroke="#0ea5e9" stroke-width="2.5" fill="rgba(255,255,255,0.4)" />
+              <circle cx="57" cy="42" r="6" stroke="#0ea5e9" stroke-width="2.5" fill="rgba(255,255,255,0.4)" />
+              <line x1="49" y1="42" x2="51" y2="42" stroke="#0ea5e9" stroke-width="2" />
+              <!-- Cheerful Smile -->
+              <path d="M 45 50 Q 50 54 55 50" stroke="#b45309" stroke-width="2" stroke-linecap="round" fill="none" />
+              <!-- Lightbulb Idea Spark above head -->
+              <path d="M 50 10 L 50 14 M 43 12 L 46 15 M 57 12 L 54 15" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round" class="anim-twinkle" />
+              <circle cx="50" cy="16" r="3.5" fill="#fbbf24" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Splash Branding -->
+      <div class="splash-branding">
+        <div class="splash-title-row">
+          <h1 class="splash-title">YGT CLASSES</h1>
+          <span class="splash-badge-tag">SCIENCE & EXCELLENCE</span>
+        </div>
+        <p class="splash-subtitle">Staff Operations & Student Database Suite</p>
+      </div>
+
+      <!-- Thought of the Day Card -->
+      <div class="splash-thought-card">
+        <div class="thought-card-header">
+          <span class="thought-badge">💡 Thought of the Day</span>
+          <button id="splashNewThoughtBtn" class="btn-refresh-thought" type="button" title="Show Another Inspiring Thought">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            <span>Next Thought</span>
+          </button>
+        </div>
+        <div class="thought-card-body">
+          <div class="quote-symbol">“</div>
+          <p id="splashThoughtText" class="thought-text">Education is not the learning of facts, but the training of the mind to think.</p>
+          <div class="thought-footer">
+            <span id="splashThoughtAuthor" class="thought-author">— Albert Einstein</span>
+            <span id="splashThoughtCategory" class="thought-tag">Scientific Thinking</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading Bar with Bubbling Beaker -->
+      <div class="splash-loading-bar-wrapper">
+        <div class="splash-progress-track">
+          <div id="splashProgressBar" class="splash-progress-fill"></div>
+        </div>
+        <div class="splash-status-row">
+          <svg class="splash-beaker-mini" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 2v5.5L4.5 18a2 2 0 0 0 1.7 3h11.6a2 2 0 0 0 1.7-3L14 7.5V2" stroke="#38bdf8"/>
+            <path d="M8 14h8" stroke="#ec4899"/>
+          </svg>
+          <span id="splashStatusText">Synchronizing YGT Classes batch records...</span>
+        </div>
+        <button id="splashSkipBtn" class="splash-skip-btn" type="button">Skip into Dashboard →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Navigation Bar -->
+  <header class="top-nav">
+    <div class="nav-left">
+      <!-- ☰ Three Line Hamburger Button -->
+      <button id="menuToggleBtn" class="icon-btn hamburger-btn" title="Open Navigation Drawer" aria-label="Menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+
+      <div class="logo-box">
+        <div class="logo-icon ygt-nav-badge">
+          <svg width="28" height="28" viewBox="0 0 36 36" fill="none">
+            <rect width="36" height="36" rx="10" fill="#4f46e5"/>
+            <ellipse cx="18" cy="18" rx="13" ry="5.5" stroke="#38bdf8" stroke-width="1.8" transform="rotate(-30 18 18)"/>
+            <ellipse cx="18" cy="18" rx="13" ry="5.5" stroke="#ec4899" stroke-width="1.8" transform="rotate(30 18 18)"/>
+            <circle cx="18" cy="18" r="3.5" fill="#fbbf24"/>
+          </svg>
+        </div>
+        <div class="logo-text">
+          <span class="logo-title">YGT Classes</span>
+          <span class="logo-subtitle">Excellence in Science & Learning</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Centered Global Student Search Bar -->
+    <div class="nav-search-container">
+      <div class="search-input-wrapper">
+        <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input 
+          type="text" 
+          id="globalSearchInput" 
+          placeholder="Search student across 10 batches by Name, Roll No, or Parent Mobile..." 
+          autocomplete="off"
+        >
+        <button id="clearSearchBtn" class="clear-search-btn" style="display:none;">✕</button>
+      </div>
+
+      <!-- Live Search Popup Dropdown -->
+      <div id="searchResultsDropdown" class="search-dropdown" style="display: none;"></div>
+    </div>
+
+    <!-- Navigation Right: Dynamic Greeting & Staff Switcher -->
+    <div class="nav-right">
+      <!-- Time-based Greeting & Staff Profile Switcher -->
+      <div class="staff-profile-card" id="staffProfileBtn" title="Click to switch staff member">
+        <div class="avatar-circle" id="currentStaffAvatar">MJ</div>
+        <div class="greeting-box">
+          <span class="greeting-time" id="greetingTimeText">Good Evening,</span>
+          <span class="staff-name" id="currentStaffName">Mr. Jones</span>
+        </div>
+        <svg class="dropdown-caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </div>
+
+      <!-- Side Log Toggle Button -->
+      <button id="toggleSideLogBtn" class="btn-side-log" title="Toggle Live Activity Side Log">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        <span>Side Log</span>
+        <span class="log-badge-count" id="logBadgeCount">0</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Left Upper Tab Drawer (Slide-Out Sidebar) -->
+  <div id="drawerOverlay" class="drawer-overlay"></div>
+  <aside id="navDrawer" class="nav-drawer">
+    <div class="drawer-header">
+      <div class="drawer-logo">
+        <div class="logo-icon sm ygt-nav-badge">
+          <svg width="22" height="22" viewBox="0 0 36 36" fill="none">
+            <rect width="36" height="36" rx="8" fill="#4f46e5"/>
+            <ellipse cx="18" cy="18" rx="13" ry="5.5" stroke="#38bdf8" stroke-width="2" transform="rotate(-30 18 18)"/>
+            <ellipse cx="18" cy="18" rx="13" ry="5.5" stroke="#ec4899" stroke-width="2" transform="rotate(30 18 18)"/>
+            <circle cx="18" cy="18" r="3.5" fill="#fbbf24"/>
+          </svg>
+        </div>
+        <h3>YGT Classes</h3>
+      </div>
+      <button id="closeDrawerBtn" class="icon-btn" aria-label="Close Menu">✕</button>
+    </div>
+
+    <div class="drawer-content">
+      <div class="drawer-section-title">PRIMARY NAVIGATION</div>
+      <ul class="drawer-links">
+        <li>
+          <a href="#" class="drawer-link active" data-view="dashboard">
+            <span class="drawer-icon">🏠</span> Home Dashboard
+          </a>
+        </li>
+        <li>
+          <a href="#" class="drawer-link" data-view="pending-fees">
+            <span class="drawer-icon">💰</span> Fees Pending Register
+          </a>
+        </li>
+        <li>
+          <a href="#" class="drawer-link" data-view="batches">
+            <span class="drawer-icon">🎓</span> Batches Management
+          </a>
+        </li>
+        <li>
+          <a href="#" class="drawer-link" data-view="attendance">
+            <span class="drawer-icon">📋</span> Daily Attendance Register
+          </a>
+        </li>
+        <li>
+          <a href="#" class="drawer-link" data-view="students">
+            <span class="drawer-icon">👥</span> All Students Directory
+          </a>
+        </li>
+      </ul>
+
+      <div class="drawer-section-title">QUICK ACTIONS</div>
+      <ul class="drawer-links">
+        <li>
+          <button class="drawer-action-btn primary" id="drawerUploadBtn">
+            <span>📥</span> Upload Batch Excel (.xlsx / .csv)
+          </button>
+        </li>
+        <li>
+          <button class="drawer-action-btn" id="drawerAddStudentBtn">
+            <span>➕</span> Enroll New Student
+          </button>
+        </li>
+        <li>
+          <button class="drawer-action-btn" id="drawerAddBatchBtn">
+            <span>🏛️</span> Create New Batch
+          </button>
+        </li>
+        <li>
+          <button class="drawer-action-btn" id="drawerDownloadTemplateBtn">
+            <span>📄</span> Download Excel Template
+          </button>
+        </li>
+      </ul>
+
+      <div class="drawer-section-title">STAFF & AUDIT</div>
+      <ul class="drawer-links">
+        <li>
+          <a href="#" class="drawer-link" id="drawerOpenStaffBtn">
+            <span class="drawer-icon">👨‍💼</span> Multi-Staff Switcher
+          </a>
+        </li>
+        <li>
+          <a href="#" class="drawer-link" id="drawerOpenSideLogBtn">
+            <span class="drawer-icon">📜</span> Full Audit History
+          </a>
+        </li>
+      </ul>
+
+      <div class="drawer-footer">
+        <p class="drawer-version">YGT Classes Suite v2.0</p>
+        <p class="drawer-ip">Multi-Staff Network Sync: Active</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Container -->
+  <div class="app-layout">
+    <main class="main-content">
+      <!-- Welcome Hero Banner with Cartoon Science & Teacher Scene -->
+      <section class="welcome-banner">
+        <div class="welcome-info">
+          <div class="welcome-badge-brand">
+            <span>🔬</span> YGT Classes Academic Portal
+          </div>
+          <h1 class="welcome-heading">
+            <span id="bannerGreeting">Good Evening</span>, <span id="bannerStaffName" class="gradient-text">Mr. Jones</span>
+          </h1>
+          <p class="welcome-sub">
+            YGT Classes Database • <span id="currentDateStr">Wednesday, Oct 28, 2026</span> • Real-time staff sync
+          </p>
+
+          <!-- Dashboard Inline Thought of the Day Widget -->
+          <div class="dashboard-thought-widget">
+            <span class="thought-widget-icon">💡</span>
+            <div class="thought-widget-content">
+              <p class="thought-widget-quote" id="dashThoughtQuote">"Learning gives creativity, creativity leads to thinking, thinking provides knowledge, knowledge makes you great."</p>
+              <span class="thought-widget-author" id="dashThoughtAuthor">— Dr. A.P.J. Abdul Kalam</span>
+            </div>
+            <button class="btn-mini-refresh-thought" id="dashRefreshThoughtBtn" title="Next Thought of the Day" type="button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            </button>
+          </div>
+
+          <div class="welcome-actions" style="margin-top: 0.5rem;">
+            <button class="btn btn-outline" id="quickSampleCsvBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Excel Template
+            </button>
+            <button class="btn btn-primary" id="openUploadModalBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              Upload Batch Excel
+            </button>
+          </div>
+        </div>
+
+        <!-- Cartoon Science Laboratory & Teacher Scene Graphic -->
+        <div class="cartoon-science-scene" aria-label="Science Education Cartoon Scene">
+          <svg width="280" height="190" viewBox="0 0 320 220" fill="none" class="cartoon-teacher-svg">
+            <defs>
+              <linearGradient id="chalkGrad" x1="0" y1="0" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#1e293b"/>
+                <stop offset="100%" stop-color="#0f172a"/>
+              </linearGradient>
+              <linearGradient id="flaskGrad" x1="0" y1="0" x2="0" y2="100%">
+                <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.8"/>
+                <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.95"/>
+              </linearGradient>
+              <linearGradient id="coatGrad" x1="0" y1="0" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="100%" stop-color="#e2e8f0"/>
+              </linearGradient>
+            </defs>
+
+            <!-- Classroom Chalkboard Frame -->
+            <rect x="15" y="15" width="180" height="120" rx="10" fill="#78350f" stroke="#92400e" stroke-width="4"/>
+            <rect x="23" y="23" width="164" height="104" rx="6" fill="url(#chalkGrad)"/>
+
+            <!-- Chalkboard Science Notes (Formulas & Sketches) -->
+            <text x="35" y="52" font-family="'JetBrains Mono', monospace" font-size="14" font-weight="700" fill="#fef08a" letter-spacing="1">E = mc²</text>
+            <!-- Atom sketch on board -->
+            <ellipse cx="140" cy="50" rx="18" ry="7" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="2,2" transform="rotate(-25 140 50)"/>
+            <ellipse cx="140" cy="50" rx="18" ry="7" fill="none" stroke="#f472b6" stroke-width="1.5" stroke-dasharray="2,2" transform="rotate(25 140 50)"/>
+            <circle cx="140" cy="50" r="3" fill="#fbbf24"/>
+            
+            <!-- F = ma & lambda*nu = c -->
+            <text x="35" y="80" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="600" fill="#67e8f9">F = m·a</text>
+            <text x="35" y="104" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="500" fill="#e2e8f0">λ·ν = c  ∫dx</text>
+            <!-- Chalkboard chalk & duster -->
+            <rect x="145" y="118" width="18" height="5" rx="2" fill="#e2e8f0"/>
+            <rect x="125" y="117" width="16" height="6" rx="2" fill="#d97706"/>
+
+            <!-- Floating 3D Atom Model above Scene -->
+            <g transform="translate(190, 30)" class="anim-atom-spin">
+              <ellipse cx="0" cy="0" rx="26" ry="10" fill="none" stroke="#38bdf8" stroke-width="2" transform="rotate(-30)"/>
+              <ellipse cx="0" cy="0" rx="26" ry="10" fill="none" stroke="#ec4899" stroke-width="2" transform="rotate(30)"/>
+              <ellipse cx="0" cy="0" rx="26" ry="10" fill="none" stroke="#10b981" stroke-width="1.8"/>
+              <circle cx="0" cy="0" r="5" fill="#fbbf24"/>
+              <circle cx="20" cy="-10" r="3" fill="#38bdf8"/>
+              <circle cx="-18" cy="12" r="3" fill="#ec4899"/>
+            </g>
+
+            <!-- Friendly Science Teacher Character (Cartoon) -->
+            <g class="anim-teacher-float">
+              <!-- Lab Bench -->
+              <rect x="10" y="175" width="300" height="12" rx="4" fill="#334155"/>
+              
+              <!-- Teacher Body / Lab Coat -->
+              <path d="M 180 200 L 180 135 C 180 120, 195 115, 215 115 C 235 115, 250 120, 250 135 L 250 200 Z" fill="url(#coatGrad)"/>
+              <!-- Blue Tie / Shirt -->
+              <path d="M 210 115 L 215 140 L 220 115 Z" fill="#6366f1"/>
+              <path d="M 213 140 L 215 165 L 217 140 Z" fill="#ec4899"/>
+              <line x1="215" y1="115" x2="215" y2="200" stroke="#cbd5e1" stroke-width="1.5"/>
+
+              <!-- Pocket with pens -->
+              <rect x="228" y="135" width="14" height="14" rx="2" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+              <line x1="232" y1="130" x2="232" y2="135" stroke="#ef4444" stroke-width="2"/>
+              <line x1="237" y1="128" x2="237" y2="135" stroke="#3b82f6" stroke-width="2"/>
+
+              <!-- Teacher Head & Friendly Face -->
+              <rect x="209" y="98" width="12" height="18" fill="#ffd1b3" rx="4"/>
+              <circle cx="215" cy="85" r="22" fill="#ffd1b3"/>
+
+              <!-- Hair -->
+              <path d="M 193 80 C 193 62, 206 58, 215 58 C 224 58, 237 62, 237 80 C 232 72, 224 66, 215 66 C 206 66, 198 72, 193 80 Z" fill="#334155"/>
+
+              <!-- Spectacles (Round nerdy science glasses) -->
+              <circle cx="206" cy="84" r="8" stroke="#0284c7" stroke-width="2.5" fill="rgba(255,255,255,0.5)"/>
+              <circle cx="224" cy="84" r="8" stroke="#0284c7" stroke-width="2.5" fill="rgba(255,255,255,0.5)"/>
+              <line x1="214" y1="84" x2="216" y2="84" stroke="#0284c7" stroke-width="2"/>
+
+              <!-- Cheerful eyes & eyebrows -->
+              <circle cx="206" cy="84" r="2.5" fill="#0f172a"/>
+              <circle cx="224" cy="84" r="2.5" fill="#0f172a"/>
+              <path d="M 200 73 Q 206 70 212 73" stroke="#475569" stroke-width="2" stroke-linecap="round" fill="none"/>
+              <path d="M 218 73 Q 224 70 230 73" stroke="#475569" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+              <!-- Smiling Mouth -->
+              <path d="M 209 95 Q 215 102 221 95" stroke="#9a3412" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+              <!-- Idea Spark above head -->
+              <g transform="translate(215, 42)" class="anim-twinkle">
+                <circle cx="0" cy="0" r="5" fill="#fbbf24"/>
+                <line x1="0" y1="-9" x2="0" y2="-5" stroke="#fbbf24" stroke-width="2"/>
+                <line x1="-7" y1="-7" x2="-4" y2="-4" stroke="#fbbf24" stroke-width="2"/>
+                <line x1="7" y1="-7" x2="4" y2="-4" stroke="#fbbf24" stroke-width="2"/>
+              </g>
+
+              <!-- Left Arm Holding Pointer pointing to Chalkboard -->
+              <g class="anim-pointer">
+                <!-- Arm -->
+                <path d="M 190 130 Q 170 120 160 100" stroke="#ffffff" stroke-width="12" stroke-linecap="round" fill="none"/>
+                <!-- Hand -->
+                <circle cx="158" cy="98" r="6" fill="#ffd1b3"/>
+                <!-- Wooden Pointer Stick pointing to formulas -->
+                <line x1="156" y1="96" x2="110" y2="55" stroke="#d97706" stroke-width="3.5" stroke-linecap="round"/>
+                <!-- Pointer tip -->
+                <circle cx="110" cy="55" r="2.5" fill="#fef08a"/>
+              </g>
+            </g>
+
+            <!-- Bubbling Erlenmeyer Flask on Lab Bench -->
+            <g transform="translate(45, 130)">
+              <!-- Glass Flask Body -->
+              <path d="M 20 0 L 26 0 L 26 15 L 42 45 C 45 50, 40 52, 35 52 L 11 52 C 6 52, 1 50, 4 45 L 20 15 Z" fill="rgba(255,255,255,0.15)" stroke="#38bdf8" stroke-width="2"/>
+              <!-- Liquid inside -->
+              <path d="M 9 46 L 37 46 C 39 49, 36 50, 33 50 L 13 50 C 10 50, 7 49, 9 46 Z" fill="url(#flaskGrad)"/>
+              
+              <!-- Animated Rising Bubbles -->
+              <circle cx="23" cy="40" r="3" fill="#67e8f9" class="anim-bubble-1"/>
+              <circle cx="28" cy="35" r="2" fill="#ec4899" class="anim-bubble-2"/>
+              <circle cx="18" cy="30" r="2.5" fill="#a7f3d0" class="anim-bubble-3"/>
+
+              <!-- Rising Steam -->
+              <path d="M 23 -2 Q 27 -10 21 -18" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" fill="none" class="anim-steam" opacity="0.7"/>
+            </g>
+
+            <!-- Stack of Science Books on Desk -->
+            <g transform="translate(100, 155)">
+              <rect x="0" y="15" width="38" height="7" rx="1.5" fill="#2563eb"/>
+              <rect x="3" y="8" width="34" height="7" rx="1.5" fill="#7c3aed"/>
+              <rect x="6" y="1" width="30" height="7" rx="1.5" fill="#f43f5e"/>
+            </g>
+
+            <!-- Twinkling Sparkles -->
+            <path d="M 285 45 L 287 50 L 292 52 L 287 54 L 285 59 L 283 54 L 278 52 L 283 50 Z" fill="#fbbf24" class="anim-twinkle"/>
+            <path d="M 30 115 L 31 119 L 35 120 L 31 121 L 30 125 L 29 121 L 25 120 L 29 119 Z" fill="#38bdf8" class="anim-twinkle"/>
+          </svg>
+        </div>
+      </section>
+
+      <!-- Dashboard Highlights Cards -->
+      <section class="stats-grid">
+        <!-- Fees Pending Highlight Card (Prominent User Requirement) -->
+        <div class="stat-card stat-pending-fees" id="statCardPending">
+          <div class="stat-badge">Critical Priority</div>
+          <div class="stat-content">
+            <span class="stat-label">Total Fees Pending</span>
+            <div class="stat-number-row">
+              <span class="stat-value pending-val" id="statTotalPending">₹0</span>
+              <span class="stat-unit" id="statPendingCount">0 students</span>
+            </div>
+            <p class="stat-desc">Sum of outstanding balances across all 10 batches</p>
+          </div>
+          <div class="stat-card-footer">
+            <button class="card-action-link" id="jumpToPendingTabBtn">View Pending List & Remind →</button>
+          </div>
+        </div>
+
+        <!-- Total Enrolled Students -->
+        <div class="stat-card">
+          <div class="stat-icon-wrapper blue">👥</div>
+          <div class="stat-content">
+            <span class="stat-label">Total Students</span>
+            <div class="stat-number-row">
+              <span class="stat-value" id="statTotalStudents">0</span>
+              <span class="stat-unit">across <span id="statBatchCount">10</span> batches</span>
+            </div>
+            <p class="stat-desc">~200 students per batch capacity</p>
+          </div>
+          <div class="stat-card-footer">
+            <button class="card-action-link" id="quickAddStudentBtn">+ Enroll New Student</button>
+          </div>
+        </div>
+
+        <!-- Today's Attendance -->
+        <div class="stat-card">
+          <div class="stat-icon-wrapper green">📋</div>
+          <div class="stat-content">
+            <span class="stat-label">Today's Attendance</span>
+            <div class="stat-number-row">
+              <span class="stat-value" id="statAttendancePct">--%</span>
+              <span class="stat-unit" id="statAttendanceDetail">Mark today</span>
+            </div>
+            <p class="stat-desc">Present vs absent record across batches</p>
+          </div>
+          <div class="stat-card-footer">
+            <button class="card-action-link" id="jumpToAttendanceBtn">Open Attendance Register →</button>
+          </div>
+        </div>
+
+        <!-- Fees Collected Today -->
+        <div class="stat-card">
+          <div class="stat-icon-wrapper purple">💳</div>
+          <div class="stat-content">
+            <span class="stat-label">Collected Today</span>
+            <div class="stat-number-row">
+              <span class="stat-value" id="statCollectedToday">₹0</span>
+              <span class="stat-unit">collected by staff</span>
+            </div>
+            <p class="stat-desc">Live synced payments recorded today</p>
+          </div>
+          <div class="stat-card-footer">
+            <button class="card-action-link" id="openSideLogSummaryBtn">View Payment Audit →</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Main Home Screen Tabs -->
+      <section class="main-tabs-section">
+        <div class="tabs-header">
+          <div class="tab-buttons">
+            <!-- Tab 1: Fees Pending (Requested by User) -->
+            <button class="tab-btn active" data-tab="tab-pending-fees" id="tabBtnPending">
+              <span class="tab-icon">💰</span>
+              <span>Fees Pending Tab</span>
+              <span class="badge-counter badge-danger" id="badgePendingCount">0</span>
+            </button>
+
+            <!-- Tab 2: Batches (Requested by User) -->
+            <button class="tab-btn" data-tab="tab-batches" id="tabBtnBatches">
+              <span class="tab-icon">🎓</span>
+              <span>Batches (10)</span>
+            </button>
+
+            <!-- Tab 3: All Students Directory -->
+            <button class="tab-btn" data-tab="tab-students" id="tabBtnStudents">
+              <span class="tab-icon">👥</span>
+              <span>All Students Directory</span>
+              <span class="badge-counter" id="badgeTotalStudents">0</span>
+            </button>
+
+            <!-- Tab 4: Daily Attendance Register -->
+            <button class="tab-btn" data-tab="tab-attendance" id="tabBtnAttendance">
+              <span class="tab-icon">📋</span>
+              <span>Daily Attendance Sheet</span>
+            </button>
+          </div>
+
+          <!-- Tab Tools / Filters -->
+          <div class="tab-tools" id="tabToolsArea">
+            <select id="filterBatchSelect" class="select-filter">
+              <option value="">All Batches (1-10)</option>
+            </select>
+            <input type="text" id="tabInlineSearchInput" placeholder="Quick filter table..." class="input-filter">
+          </div>
+        </div>
+
+        <!-- Tab 1 Body: FEES PENDING TAB (Home Screen Centerpiece) -->
+        <div class="tab-pane active" id="tab-pending-fees">
+          <div class="table-card">
+            <div class="table-card-header">
+              <div>
+                <h3>Students with Fees Pending</h3>
+                <p class="table-subtitle">All students across batches with unpaid course balance. One-click collect fee or send WhatsApp reminder.</p>
+              </div>
+              <div class="table-header-actions">
+                <span class="pending-total-pill">Total Outstanding: <strong id="pendingTabTotalSum">₹0</strong></span>
+                <button class="btn btn-sm btn-outline" id="exportPendingCsvBtn">Export Pending List</button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table" id="pendingFeesTable">
+                <thead>
+                  <tr>
+                    <th>Roll No</th>
+                    <th>Student Name</th>
+                    <th>Batch</th>
+                    <th>Parent Mobile</th>
+                    <th>Total Course Fee</th>
+                    <th>Paid Amount</th>
+                    <th>Pending Balance</th>
+                    <th>Quick Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="pendingFeesTableBody">
+                  <tr>
+                    <td colspan="8" class="text-center loading-cell">Loading pending fees records...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2 Body: BATCHES GRID -->
+        <div class="tab-pane" id="tab-batches">
+          <div class="batches-header-bar">
+            <div>
+              <h3>Institute Batches (Approx. 200 Students Each)</h3>
+              <p class="table-subtitle">Manage schedules, view enrollment, check pending fees per batch, and upload batch spreadsheets.</p>
+            </div>
+            <button class="btn btn-primary btn-sm" id="btnCreateNewBatch">+ Create Batch</button>
+          </div>
+
+          <div class="batches-grid" id="batchesGridContainer">
+            <!-- Dynamically populated batch cards -->
+          </div>
+        </div>
+
+        <!-- Tab 3 Body: ALL STUDENTS DIRECTORY -->
+        <div class="tab-pane" id="tab-students">
+          <div class="table-card">
+            <div class="table-card-header">
+              <div>
+                <h3>Complete Student Directory</h3>
+                <p class="table-subtitle">Search, view, and edit personal details, phone numbers, and academic records.</p>
+              </div>
+              <div class="table-header-actions">
+                <button class="btn btn-sm btn-primary" id="btnDirectoryAddStudent">+ Enroll Student</button>
+                <button class="btn btn-sm btn-outline" id="btnExportAllCsv">Export All CSV</button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table" id="allStudentsTable">
+                <thead>
+                  <tr>
+                    <th>Roll No</th>
+                    <th>Student Name</th>
+                    <th>Batch</th>
+                    <th>Parent Mobile</th>
+                    <th>Total Fees</th>
+                    <th>Paid Amount</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="allStudentsTableBody">
+                  <tr>
+                    <td colspan="8" class="text-center loading-cell">Loading students...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="table-pagination">
+              <span id="paginationInfo">Showing 1 to 50 of 2000 students</span>
+              <div class="pagination-buttons">
+                <button class="btn-page" id="prevPageBtn">Previous</button>
+                <span id="currentPageNum" class="page-indicator">1</span>
+                <button class="btn-page" id="nextPageBtn">Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4 Body: DAILY ATTENDANCE REGISTER -->
+        <div class="tab-pane" id="tab-attendance">
+          <div class="table-card">
+            <div class="attendance-top-bar">
+              <div class="attendance-controls">
+                <div class="form-group-inline">
+                  <label for="attendanceBatchSelect">Select Batch:</label>
+                  <select id="attendanceBatchSelect" class="form-input"></select>
+                </div>
+                <div class="form-group-inline">
+                  <label for="attendanceDatePicker">Date:</label>
+                  <input type="date" id="attendanceDatePicker" class="form-input">
+                </div>
+                <button class="btn btn-sm btn-secondary" id="btnLoadAttendance">Load Sheet</button>
+              </div>
+
+              <div class="attendance-bulk-actions">
+                <button class="btn btn-sm btn-success-outline" id="btnMarkAllPresent">✓ Mark All Present</button>
+                <button class="btn btn-sm btn-danger-outline" id="btnMarkAllAbsent">✕ Mark All Absent</button>
+                <button class="btn btn-sm btn-primary" id="btnSaveAttendance">💾 Save Attendance</button>
+              </div>
+            </div>
+
+            <div class="attendance-stats-bar" id="attendanceStatsBar">
+              <span class="att-stat">Enrolled: <strong id="attTotalEnrolled">0</strong></span>
+              <span class="att-stat present">Present: <strong id="attPresentCount">0</strong></span>
+              <span class="att-stat absent">Absent: <strong id="attAbsentCount">0</strong></span>
+              <span class="att-stat">Attendance Rate: <strong id="attRatePct">0%</strong></span>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table" id="attendanceTable">
+                <thead>
+                  <tr>
+                    <th style="width: 80px;">Roll No</th>
+                    <th>Student Name</th>
+                    <th>Parent Mobile</th>
+                    <th>Attendance Status</th>
+                    <th>Quick Contact</th>
+                  </tr>
+                </thead>
+                <tbody id="attendanceTableBody">
+                  <tr>
+                    <td colspan="5" class="text-center loading-cell">Select a batch to load attendance</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Side Log Panel (Side Activity Feed requested by User) -->
+    <aside id="sideLogPanel" class="side-log-panel open">
+      <div class="side-log-header">
+        <div class="side-log-title-row">
+          <div class="side-log-icon">🕒</div>
+          <div>
+            <h4>Live Activity Log</h4>
+            <span class="side-log-subtitle">Multi-Staff Operations Stream</span>
+          </div>
+        </div>
+        <button id="closeSideLogBtn" class="icon-btn sm" title="Collapse Side Log">✕</button>
+      </div>
+
+      <div class="side-log-sync-badge">
+        <span class="pulse-green"></span>
+        <span>Connected to live multi-staff sync</span>
+      </div>
+
+      <div class="side-log-filter-tabs">
+        <button class="log-filter-chip active" data-filter="ALL">All</button>
+        <button class="log-filter-chip" data-filter="FEE">Fees</button>
+        <button class="log-filter-chip" data-filter="ATTENDANCE">Attendance</button>
+        <button class="log-filter-chip" data-filter="STUDENT">Students</button>
+      </div>
+
+      <div class="side-log-body" id="sideLogBody">
+        <!-- Live activity entries stream here -->
+      </div>
+    </aside>
+  </div>
+
+  <!-- MODALS -->
+
+  <!-- 1. EXCEL / CSV DIRECT UPLOAD MODAL -->
+  <div id="uploadModal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h3>Upload Batch Students Excel / CSV</h3>
+          <p class="modal-subtitle">Directly upload 200+ students per batch from your spreadsheet</p>
+        </div>
+        <button class="modal-close-btn" data-close-modal="uploadModal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="upload-dropzone" id="uploadDropzone">
+          <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;">
+          <div class="dropzone-content">
+            <div class="dropzone-icon">📁</div>
+            <h4>Drag & drop your Excel or CSV file here</h4>
+            <p>Supports .xlsx, .xls, and .csv files (e.g. 200 students per batch)</p>
+            <button class="btn btn-outline" id="browseFileBtn">Browse File</button>
+            <span id="selectedFileName" class="selected-file-label"></span>
+          </div>
+        </div>
+
+        <div class="form-row mt-3">
+          <div class="form-group flex-1">
+            <label for="importBatchSelect">Target Batch:</label>
+            <select id="importBatchSelect" class="form-input">
+              <option value="">Auto-detect from "Batch Name" column in Excel</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="uploadPreviewSection" class="upload-preview" style="display: none;">
+          <h5>Spreadsheet Preview (First 5 Rows Detected)</h5>
+          <div class="table-responsive preview-table-wrap">
+            <table class="data-table preview-table" id="previewTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div id="columnMappingBadges" class="mapping-badges"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close-modal="uploadModal">Cancel</button>
+        <button class="btn btn-primary" id="confirmUploadBtn" disabled>
+          <span>📥</span> Confirm & Import Students
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. RECORD FEE PAYMENT MODAL -->
+  <div id="feeModal" class="modal-backdrop">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <div>
+          <h3>Record Student Fee Payment</h3>
+          <p class="modal-subtitle" id="feeModalSubtitle">Student: Rahul Sharma</p>
+        </div>
+        <button class="modal-close-btn" data-close-modal="feeModal">✕</button>
+      </div>
+
+      <form id="feePaymentForm">
+        <input type="hidden" id="feeStudentId">
+        <div class="modal-body">
+          <div class="fee-summary-box">
+            <div class="fee-summary-row">
+              <span>Total Course Fee:</span>
+              <strong id="modalTotalFee">₹65,000</strong>
+            </div>
+            <div class="fee-summary-row">
+              <span>Previously Paid:</span>
+              <strong class="text-green" id="modalPaidFee">₹40,000</strong>
+            </div>
+            <div class="fee-summary-row highlight">
+              <span>Current Pending Balance:</span>
+              <strong class="text-red" id="modalPendingFee">₹25,000</strong>
+            </div>
+          </div>
+
+          <div class="form-group mt-3">
+            <label for="feeAmountInput">Amount Being Paid Now (₹): *</label>
+            <input type="number" id="feeAmountInput" class="form-input lg" required min="1" placeholder="e.g. 5000">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="feePaymentMode">Payment Mode:</label>
+              <select id="feePaymentMode" class="form-input">
+                <option value="UPI / GPay / PhonePe">UPI / GPay / PhonePe</option>
+                <option value="Cash">Cash</option>
+                <option value="Bank Transfer (NEFT/IMPS)">Bank Transfer (NEFT/IMPS)</option>
+                <option value="Cheque">Cheque</option>
+                <option value="Debit / Credit Card">Debit / Credit Card</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="feeRefNo">Reference / Txn No:</label>
+              <input type="text" id="feeRefNo" class="form-input" placeholder="Optional">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="feeNotes">Remarks / Receipt Note:</label>
+            <input type="text" id="feeNotes" class="form-input" placeholder="e.g. Second installment paid">
+          </div>
+
+          <div class="staff-tag-row">
+            <span>Collecting Staff:</span>
+            <strong id="feeStaffBadge">Mr. Jones</strong>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-close-modal="feeModal">Cancel</button>
+          <button type="submit" class="btn btn-success" id="submitFeeBtn">
+            ✓ Record Fee & Generate Receipt
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. STUDENT PROFILE & EDIT MODAL -->
+  <div id="studentModal" class="modal-backdrop">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="student-modal-title">
+          <div class="avatar-lg" id="modalStudentAvatar">AS</div>
+          <div>
+            <h3 id="modalStudentHeading">Student Profile</h3>
+            <p class="modal-subtitle" id="modalStudentSub">Roll No: 11001 • Batch 1</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" data-close-modal="studentModal">✕</button>
+      </div>
+
+      <div class="student-profile-tabs">
+        <button class="sp-tab-btn active" data-sptab="sp-details">Personal & Parent Details</button>
+        <button class="sp-tab-btn" data-sptab="sp-fees">Fee Ledger & History</button>
+        <button class="sp-tab-btn" data-sptab="sp-att">Attendance Record</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Tab A: Details -->
+        <div class="sptab-pane active" id="sp-details">
+          <form id="studentEditForm">
+            <input type="hidden" id="editStudentId">
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="editStudentName">Student Full Name: *</label>
+                <input type="text" id="editStudentName" class="form-input" required>
+              </div>
+              <div class="form-group flex-1">
+                <label for="editRollNo">Roll Number / Reg No: *</label>
+                <input type="text" id="editRollNo" class="form-input" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="editBatchSelect">Enrolled Batch: *</label>
+                <select id="editBatchSelect" class="form-input" required></select>
+              </div>
+              <div class="form-group flex-1">
+                <label for="editGender">Gender:</label>
+                <select id="editGender" class="form-input">
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="section-divider">Parent / Contact Details</div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="editParentName">Parent / Guardian Name:</label>
+                <input type="text" id="editParentName" class="form-input">
+              </div>
+              <div class="form-group flex-1">
+                <label for="editParentPhone">Parent Mobile Number: *</label>
+                <div class="input-with-action">
+                  <input type="tel" id="editParentPhone" class="form-input" required placeholder="10-digit mobile">
+                  <button type="button" class="btn-whatsapp" id="btnWhatsappParent" title="Chat on WhatsApp">💬</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="editStudentPhone">Student Mobile Number:</label>
+                <input type="tel" id="editStudentPhone" class="form-input">
+              </div>
+              <div class="form-group flex-1">
+                <label for="editEmail">Email Address:</label>
+                <input type="email" id="editEmail" class="form-input">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="editAddress">Residential Address:</label>
+              <input type="text" id="editAddress" class="form-input">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="editTotalFee">Total Course Fee (₹):</label>
+                <input type="number" id="editTotalFee" class="form-input">
+              </div>
+              <div class="form-group flex-1">
+                <label for="editStatus">Enrollment Status:</label>
+                <select id="editStatus" class="form-input">
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="modal-footer" style="padding-left:0; padding-right:0; margin-bottom:0;">
+              <button type="button" class="btn btn-outline" data-close-modal="studentModal">Close</button>
+              <button type="submit" class="btn btn-primary" id="btnSaveStudentDetails">Save Changes</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Tab B: Fee Ledger -->
+        <div class="sptab-pane" id="sp-fees">
+          <div class="ledger-summary-banner">
+            <div class="ls-item"><span>Total Fee:</span> <strong id="spTotalFee">₹0</strong></div>
+            <div class="ls-item"><span>Total Paid:</span> <strong class="text-green" id="spTotalPaid">₹0</strong></div>
+            <div class="ls-item"><span>Balance Pending:</span> <strong class="text-red" id="spTotalPending">₹0</strong></div>
+            <button class="btn btn-sm btn-success" id="btnOpenFeeFromProfile">+ Collect Fee</button>
+          </div>
+
+          <div class="table-responsive mt-3">
+            <table class="data-table" id="studentFeeHistoryTable">
+              <thead>
+                <tr>
+                  <th>Date & Time</th>
+                  <th>Amount</th>
+                  <th>Payment Mode</th>
+                  <th>Ref #</th>
+                  <th>Staff Member</th>
+                  <th>Receipt</th>
+                </tr>
+              </thead>
+              <tbody id="studentFeeHistoryBody">
+                <tr><td colspan="6" class="text-center">No fee transactions yet</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab C: Attendance -->
+        <div class="sptab-pane" id="sp-att">
+          <div class="table-responsive">
+            <table class="data-table" id="studentAttHistoryTable">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Marked By Staff</th>
+                  <th>Timestamp</th>
+                </tr>
+              </thead>
+              <tbody id="studentAttHistoryBody">
+                <tr><td colspan="4" class="text-center">No attendance recorded</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. STAFF SWITCHER MODAL -->
+  <div id="staffModal" class="modal-backdrop">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <div>
+          <h3>Staff Member Profile</h3>
+          <p class="modal-subtitle">Select who is operating this terminal</p>
+        </div>
+        <button class="modal-close-btn" data-close-modal="staffModal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="staff-picker-list" id="staffPickerList">
+          <!-- Dynamically populated staff cards -->
+        </div>
+
+        <div class="section-divider mt-4">Add New Staff Member</div>
+        <form id="addStaffForm" class="mt-2">
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <input type="text" id="newStaffNameInput" class="form-input" placeholder="Staff Name (e.g. Ms. Sharma)" required>
+            </div>
+            <button type="submit" class="btn btn-outline">+ Add</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-primary" data-close-modal="staffModal">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. CREATE BATCH MODAL -->
+  <div id="batchModal" class="modal-backdrop">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <div>
+          <h3>Create New Batch</h3>
+          <p class="modal-subtitle">Add a batch to coaching database</p>
+        </div>
+        <button class="modal-close-btn" data-close-modal="batchModal">✕</button>
+      </div>
+
+      <form id="createBatchForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="newBatchName">Batch Name: *</label>
+            <input type="text" id="newBatchName" class="form-input" required placeholder="e.g. Batch 11 - Class 10 Foundation">
+          </div>
+          <div class="form-group">
+            <label for="newBatchCode">Batch Code:</label>
+            <input type="text" id="newBatchCode" class="form-input" placeholder="e.g. FND-11">
+          </div>
+          <div class="form-group">
+            <label for="newBatchSchedule">Schedule / Timing:</label>
+            <input type="text" id="newBatchSchedule" class="form-input" placeholder="e.g. Mon to Fri 4:00 PM - 6:00 PM">
+          </div>
+          <div class="form-group">
+            <label for="newBatchDefaultFee">Default Course Fee (₹):</label>
+            <input type="number" id="newBatchDefaultFee" class="form-input" value="60000">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-close-modal="batchModal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Batch</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 6. PRINTABLE FEE RECEIPT MODAL -->
+  <div id="receiptModal" class="modal-backdrop">
+    <div class="modal-card modal-md">
+      <div class="modal-header no-print">
+        <h3>Fee Payment Receipt</h3>
+        <button class="modal-close-btn" data-close-modal="receiptModal">✕</button>
+      </div>
+
+      <div class="receipt-printable-area" id="printableReceiptArea">
+        <div class="receipt-header">
+          <div class="receipt-logo" style="background: linear-gradient(135deg, #4f46e5, #06b6d4); font-size: 1.1rem; font-weight: 800; color: #fff;">YGT</div>
+          <div class="receipt-institute-info">
+            <h2>YGT CLASSES</h2>
+            <p>Premier Academic Coaching • Science & Mathematics • JEE | NEET | Foundation</p>
+            <p>Phone: +91 98765 00000 • Email: contact@ygtclasses.com</p>
+          </div>
+        </div>
+
+        <div class="receipt-title-banner">FEE PAYMENT RECEIPT</div>
+
+        <div class="receipt-meta-grid">
+          <div><span>Receipt No:</span> <strong id="rcptNo">RCP-10492</strong></div>
+          <div><span>Date & Time:</span> <strong id="rcptDate">28-10-2026 8:45 PM</strong></div>
+          <div><span>Student Name:</span> <strong id="rcptStudentName">Rahul Sharma</strong></div>
+          <div><span>Roll No:</span> <strong id="rcptRollNo">11001</strong></div>
+          <div><span>Batch:</span> <strong id="rcptBatch">Batch 1 - Class 11 JEE</strong></div>
+          <div><span>Parent Phone:</span> <strong id="rcptPhone">9876543210</strong></div>
+        </div>
+
+        <div class="receipt-amount-card">
+          <div class="rac-item">
+            <span>Payment Mode</span>
+            <strong id="rcptMode">UPI</strong>
+          </div>
+          <div class="rac-item highlight">
+            <span>Amount Paid Now</span>
+            <strong id="rcptAmount">₹5,000</strong>
+          </div>
+          <div class="rac-item">
+            <span>Total Fee</span>
+            <strong id="rcptTotalFee">₹65,000</strong>
+          </div>
+          <div class="rac-item">
+            <span>Remaining Balance</span>
+            <strong id="rcptPendingFee" class="text-red">₹20,000</strong>
+          </div>
+        </div>
+
+        <div class="receipt-footer-notes">
+          <p>Remarks: <span id="rcptRemarks">Course installment payment</span></p>
+          <div class="receipt-signatures">
+            <div class="sig-box">
+              <div class="sig-line"></div>
+              <span>Student / Parent Signature</span>
+            </div>
+            <div class="sig-box">
+              <div class="sig-line" id="rcptStaffSignature">Staff: Mr. Jones</div>
+              <span>Authorized Staff Stamp</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer no-print">
+        <button class="btn btn-outline" data-close-modal="receiptModal">Close</button>
+        <button class="btn btn-primary" id="btnPrintReceipt">🖨️ Print Receipt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Main Application JavaScript -->
+  <script src="app.js"></script>
+</body>
+</html>
