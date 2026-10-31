@@ -116,6 +116,9 @@ const elements = {
   logBadgeCount: document.getElementById('logBadgeCount'),
 
   // Search
+  navSearchContainer: document.getElementById('navSearchContainer'),
+  headerSearchToggleBtn: document.getElementById('headerSearchToggleBtn'),
+  closeSearchBtn: document.getElementById('closeSearchBtn'),
   globalSearchInput: document.getElementById('globalSearchInput'),
   clearSearchBtn: document.getElementById('clearSearchBtn'),
   searchResultsDropdown: document.getElementById('searchResultsDropdown'),
@@ -238,10 +241,10 @@ function updateGreeting() {
     greeting = 'Good Night';
   }
 
-  elements.greetingTimeText.textContent = `${greeting},`;
-  elements.currentStaffName.textContent = state.currentStaff;
-  elements.bannerGreeting.textContent = greeting;
-  elements.bannerStaffName.textContent = state.currentStaff;
+  if (elements.greetingTimeText) elements.greetingTimeText.textContent = `${greeting},`;
+  if (elements.currentStaffName) elements.currentStaffName.textContent = state.currentStaff;
+  if (elements.bannerGreeting) elements.bannerGreeting.textContent = greeting;
+  if (elements.bannerStaffName) elements.bannerStaffName.textContent = state.currentStaff;
 
   const initials = state.currentStaff
     .split(' ')
@@ -678,8 +681,61 @@ function updatePagination() {
 }
 
 // ==========================================================
-// 7. GLOBAL SEARCH AUTOCOMPLETE (Homescreen Centerpiece)
+// 7. EXPANDABLE SEARCH & LIVE AUTOCOMPLETE
 // ==========================================================
+function openNavSearch() {
+  if (!elements.navSearchContainer) return;
+  elements.navSearchContainer.classList.add('expanded');
+  setTimeout(() => {
+    if (elements.globalSearchInput) {
+      elements.globalSearchInput.focus();
+      elements.globalSearchInput.select();
+    }
+  }, 60);
+}
+
+function closeNavSearch() {
+  if (!elements.navSearchContainer) return;
+  elements.navSearchContainer.classList.remove('expanded');
+  if (elements.searchResultsDropdown) {
+    elements.searchResultsDropdown.style.display = 'none';
+  }
+}
+
+if (elements.headerSearchToggleBtn) {
+  elements.headerSearchToggleBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    openNavSearch();
+  });
+}
+
+if (elements.closeSearchBtn) {
+  elements.closeSearchBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    closeNavSearch();
+  });
+}
+
+// Close when clicking outside of navSearchContainer
+document.addEventListener('click', e => {
+  if (elements.navSearchContainer && elements.navSearchContainer.classList.contains('expanded')) {
+    if (!elements.navSearchContainer.contains(e.target) && e.target !== elements.headerSearchToggleBtn && !elements.headerSearchToggleBtn?.contains(e.target)) {
+      closeNavSearch();
+    }
+  }
+});
+
+// Close on Escape, Open on '/'
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeNavSearch();
+  }
+  if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+    e.preventDefault();
+    openNavSearch();
+  }
+});
+
 let searchDebounceTimeout = null;
 elements.globalSearchInput.addEventListener('input', e => {
   const q = e.target.value.trim();
@@ -705,6 +761,7 @@ elements.clearSearchBtn.addEventListener('click', () => {
   elements.globalSearchInput.value = '';
   elements.clearSearchBtn.style.display = 'none';
   elements.searchResultsDropdown.style.display = 'none';
+  elements.globalSearchInput.focus();
 });
 
 function renderGlobalSearchResults(students) {
@@ -719,7 +776,7 @@ function renderGlobalSearchResults(students) {
     .map(s => {
       const pendingStr = s.pending_fee > 0 ? `<span class="search-item-badge" style="background:#fee2e2; color:#ef4444;">Due: ${formatCurrency(s.pending_fee)}</span>` : `<span class="search-item-badge" style="background:#ecfdf5; color:#10b981;">Cleared</span>`;
       return `
-        <div class="search-item" onclick="openStudentModal(${s.id}); elements.searchResultsDropdown.style.display='none';">
+        <div class="search-item" onclick="openStudentModal(${s.id}); closeNavSearch();">
           <div class="search-item-info">
             <span class="search-item-name">${escapeHtml(s.name)} (Roll: ${escapeHtml(s.roll_no)})</span>
             <span class="search-item-meta">🎓 ${escapeHtml(s.batch_name)} • 📞 Parent: ${escapeHtml(s.parent_phone)}</span>
@@ -1530,10 +1587,89 @@ function dismissSplashScreen() {
 }
 
 // ==========================================================
-// 15. INITIALIZATION
+// 15. LIVE MOBILE PHONE SIMULATOR
+// ==========================================================
+function initDeviceSimulator() {
+  const btnModeDesktop = document.getElementById('btnPreviewDesktop');
+  const btnModeMobile = document.getElementById('btnPreviewMobile');
+  const headerToggleBtn = document.getElementById('headerSimulatorToggleBtn');
+  const deviceToggleIcon = document.getElementById('deviceToggleIcon');
+  const deviceToggleText = document.getElementById('deviceToggleText');
+  const dockPresetGroup = document.getElementById('dockPresetGroup');
+  const smartphoneFrame = document.getElementById('smartphoneFrame');
+  const simStatusTime = document.getElementById('simStatusTime');
+
+  function updateSimTime() {
+    if (simStatusTime) {
+      const now = new Date();
+      simStatusTime.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+  }
+  updateSimTime();
+  setInterval(updateSimTime, 30000);
+
+  function setMode(mode) {
+    if (mode === 'mobile') {
+      document.body.classList.add('mobile-simulator-active');
+      if (btnModeMobile) btnModeMobile.classList.add('active');
+      if (btnModeDesktop) btnModeDesktop.classList.remove('active');
+      if (headerToggleBtn) headerToggleBtn.classList.add('active');
+      if (deviceToggleIcon) deviceToggleIcon.textContent = '💻';
+      if (deviceToggleText) deviceToggleText.textContent = 'Desktop';
+      if (dockPresetGroup) dockPresetGroup.style.display = 'flex';
+      localStorage.setItem('ygt_device_mode', 'mobile');
+    } else {
+      document.body.classList.remove('mobile-simulator-active');
+      if (btnModeDesktop) btnModeDesktop.classList.add('active');
+      if (btnModeMobile) btnModeMobile.classList.remove('active');
+      if (headerToggleBtn) headerToggleBtn.classList.remove('active');
+      if (deviceToggleIcon) deviceToggleIcon.textContent = '📱';
+      if (deviceToggleText) deviceToggleText.textContent = 'Phone View';
+      if (dockPresetGroup) dockPresetGroup.style.display = 'none';
+      localStorage.setItem('ygt_device_mode', 'desktop');
+    }
+  }
+
+  if (btnModeDesktop) {
+    btnModeDesktop.addEventListener('click', () => setMode('desktop'));
+  }
+  if (btnModeMobile) {
+    btnModeMobile.addEventListener('click', () => setMode('mobile'));
+  }
+  if (headerToggleBtn) {
+    headerToggleBtn.addEventListener('click', () => {
+      const isMobile = document.body.classList.contains('mobile-simulator-active');
+      setMode(isMobile ? 'desktop' : 'mobile');
+    });
+  }
+
+  // Device Presets
+  document.querySelectorAll('.dock-preset-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.dock-preset-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const width = chip.getAttribute('data-width');
+      const height = chip.getAttribute('data-height');
+      if (smartphoneFrame) {
+        smartphoneFrame.style.width = width + 'px';
+        smartphoneFrame.style.height = height + 'px';
+      }
+    });
+  });
+
+  // Load saved preference
+  const savedMode = localStorage.getItem('ygt_device_mode') || 'desktop';
+  if (savedMode === 'mobile') {
+    setMode('mobile');
+  }
+}
+
+// ==========================================================
+// 16. INITIALIZATION
 // ==========================================================
 window.addEventListener('DOMContentLoaded', async () => {
   initSplashScreen();
+  initDeviceSimulator();
 
   elements.attendanceDatePicker.value = state.currentAttendanceDate;
   updateGreeting();
