@@ -303,43 +303,8 @@
     </div>
   </div>
 
-  <!-- Floating Live Device Preview Switcher (Desktop vs Mobile Phone Simulator) -->
-  <aside id="simulatorDock" class="simulator-dock no-print" aria-label="Device View Switcher">
-    <div class="dock-badge">
-      <span class="dock-dot"></span>
-      <span class="dock-txt">PREVIEW</span>
-    </div>
-    <div class="dock-toggle-group">
-      <button type="button" id="btnPreviewDesktop" class="dock-btn active" title="Switch to Full Desktop View">
-        💻 <span>Desktop</span>
-      </button>
-      <button type="button" id="btnPreviewMobile" class="dock-btn" title="Switch to Mobile Phone Simulator">
-        📱 <span>Mobile Phone</span>
-      </button>
-    </div>
-    <div class="dock-preset-group" id="dockPresetGroup" style="display: none;">
-      <button type="button" class="dock-preset-chip active" data-width="412" data-height="870">Android (412px)</button>
-      <button type="button" class="dock-preset-chip" data-width="390" data-height="844">iPhone (390px)</button>
-      <button type="button" class="dock-preset-chip" data-width="360" data-height="780">Compact (360px)</button>
-    </div>
-  </aside>
-
-  <!-- Device Outer Shell -->
-  <div id="deviceShell" class="device-shell">
-    <div id="smartphoneFrame" class="smartphone-frame">
-      <div class="smartphone-camera-notch"></div>
-      <div class="smartphone-status-bar">
-        <span class="status-time" id="simStatusTime">9:41 AM</span>
-        <div class="status-icons">
-          <span>5G</span>
-          <span>📶</span>
-          <span>🔋 100%</span>
-        </div>
-      </div>
-
-      <div id="smartphoneViewport" class="smartphone-viewport">
-        <!-- Top Navigation Bar -->
-        <header class="top-nav">
+  <!-- Top Navigation Bar -->
+  <header class="top-nav">
           <div class="nav-left">
             <!-- ☰ Three Line Hamburger Button -->
             <button id="menuToggleBtn" class="icon-btn hamburger-btn" title="Open Navigation Drawer" aria-label="Menu">
@@ -413,11 +378,6 @@
             <div class="staff-profile-card avatar-only" id="staffProfileBtn" title="Click to switch staff member">
               <div class="avatar-circle" id="currentStaffAvatar">RY</div>
             </div>
-
-            <!-- Device Simulator Quick Toggle Button -->
-            <button id="headerSimulatorToggleBtn" class="btn-device-toggle" title="Toggle Live Mobile Phone Simulator" type="button">
-              <span id="deviceToggleIcon">📱</span>
-            </button>
           </div>
         </header>
 
@@ -556,7 +516,7 @@
           </h1>
           
           <p class="welcome-sub">
-            <span id="currentDateStr">11 Students. 10 Batches</span>
+            <span id="currentDateStr">0 Students. 0 Batches</span>
           </p>
 
           <!-- Daily Educational Quote Tile (Apple Minimal Style) -->
@@ -591,7 +551,7 @@
             <span class="stat-value pending-val" id="statTotalPending">₹0</span>
             <span class="stat-unit" id="statPendingCount">0 students</span>
           </div>
-          <p class="stat-desc">Sum of outstanding balances across all 10 batches</p>
+          <p class="stat-desc">Sum of outstanding balances across all batches</p>
           <div class="stat-card-footer">
             <button class="card-action-link" id="jumpToPendingTabBtn">View Pending List & Remind →</button>
           </div>
@@ -662,7 +622,7 @@
         <!-- Table Tools / Filters for Fees & Students Directory -->
         <div class="tab-tools view-filter-bar" id="tabToolsArea">
           <select id="filterBatchSelect" class="select-filter">
-            <option value="">All Batches (1-10)</option>
+            <option value="">All Batches</option>
           </select>
           <input type="text" id="tabInlineSearchInput" placeholder="Quick filter table by student name or roll no..." class="input-filter">
         </div>
@@ -907,11 +867,6 @@
       </section>
     </main>
   </div>
-      </div>
-      <!-- Bottom Android Navigation Gesture Pill -->
-      <div class="smartphone-nav-pill"></div>
-    </div>
-  </div>
 
   <!-- MODALS -->
 
@@ -1048,7 +1003,7 @@
           <div class="avatar-lg" id="modalStudentAvatar">AS</div>
           <div>
             <h3 id="modalStudentHeading">Student Profile</h3>
-            <p class="modal-subtitle" id="modalStudentSub">Roll No: 11001 • Batch 1</p>
+            <p class="modal-subtitle" id="modalStudentSub">Student Information</p>
           </div>
         </div>
         <button class="modal-close-btn" data-close-modal="studentModal">✕</button>
@@ -1291,7 +1246,7 @@
           <div><span>Receipt No:</span> <strong id="rcptNo">RCP-10492</strong></div>
           <div><span>Date & Time:</span> <strong id="rcptDate">28-10-2026 8:45 PM</strong></div>
           <div><span>Student Name:</span> <strong id="rcptStudentName">Rahul Sharma</strong></div>
-          <div><span>Roll No:</span> <strong id="rcptRollNo">11001</strong></div>
+          <div><span>Roll No:</span> <strong id="rcptRollNo">-</strong></div>
           <div><span>Batch:</span> <strong id="rcptBatch">Batch 1 - Class 11 JEE</strong></div>
           <div><span>Parent Phone:</span> <strong id="rcptPhone">9876543210</strong></div>
         </div>

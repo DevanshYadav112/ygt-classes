@@ -91,63 +91,11 @@ function initDb(dbFilePath) {
     CREATE INDEX IF NOT EXISTS idx_activity_created ON activity_logs(created_at DESC);
   `);
 
-  // Seed default staff if empty
+  // Seed default director staff if empty
   const staffCount = db.prepare('SELECT COUNT(*) as count FROM staff').get().count;
   if (staffCount === 0) {
     const insertStaff = db.prepare('INSERT INTO staff (name, role, avatar_color) VALUES (?, ?, ?)');
-    insertStaff.run('Mr. Jones', 'Director / Admin', '#6366f1');
-    insertStaff.run('Staff 1 (Pooja)', 'Academic Coordinator', '#ec4899');
-    insertStaff.run('Staff 2 (Ramesh)', 'Front Desk & Accounts', '#10b981');
-    insertStaff.run('Staff 3 (Anil)', 'Attendance In-charge', '#f59e0b');
-  }
-
-  // Seed default batches if empty
-  const batchCount = db.prepare('SELECT COUNT(*) as count FROM batches').get().count;
-  if (batchCount === 0) {
-    const insertBatch = db.prepare('INSERT INTO batches (name, code, schedule, default_fee) VALUES (?, ?, ?, ?)');
-    insertBatch.run('Batch 1 - Class 11 JEE (Advanced)', 'JEE-11A', 'Mon, Wed, Fri 4:00 PM - 7:00 PM', 65000);
-    insertBatch.run('Batch 2 - Class 11 NEET (Medical)', 'NEET-11A', 'Tue, Thu, Sat 4:00 PM - 7:00 PM', 60000);
-    insertBatch.run('Batch 3 - Class 12 JEE (Mains + Adv)', 'JEE-12A', 'Mon, Wed, Fri 5:30 PM - 8:30 PM', 75000);
-    insertBatch.run('Batch 4 - Class 12 NEET (Super 50)', 'NEET-12A', 'Tue, Thu, Sat 5:30 PM - 8:30 PM', 70000);
-    insertBatch.run('Batch 5 - Foundation Class 9', 'FND-09', 'Daily 3:00 PM - 5:00 PM', 40000);
-    insertBatch.run('Batch 6 - Foundation Class 10 Board Booster', 'FND-10', 'Daily 5:00 PM - 7:00 PM', 45000);
-    insertBatch.run('Batch 7 - Repeater / Dropper JEE Batch', 'REP-JEE', 'Mon-Sat 9:00 AM - 2:00 PM', 80000);
-    insertBatch.run('Batch 8 - Repeater / Dropper NEET Batch', 'REP-NEET', 'Mon-Sat 9:00 AM - 2:00 PM', 75000);
-    insertBatch.run('Batch 9 - Weekend Intensive Class 11', 'WKND-11', 'Sat & Sun 9:00 AM - 3:00 PM', 50000);
-    insertBatch.run('Batch 10 - Weekend Intensive Class 12', 'WKND-12', 'Sat & Sun 9:00 AM - 3:00 PM', 55000);
-
-    // Seed initial demo students with realistic fees & logs
-    const seedStudents = [
-      { roll: '11001', name: 'Aarav Sharma', b: 1, p: 'Sunil Sharma', ph: '9876543210', tot: 65000, paid: 40000 },
-      { roll: '11002', name: 'Ishita Verma', b: 1, p: 'Rajesh Verma', ph: '9876543211', tot: 65000, paid: 65000 },
-      { roll: '11003', name: 'Rohan Gupta', b: 1, p: 'Manoj Gupta', ph: '9876543212', tot: 65000, paid: 25000 },
-      { roll: '11004', name: 'Sneha Patel', b: 1, p: 'Kirit Patel', ph: '9876543213', tot: 65000, paid: 15000 },
-      { roll: '12001', name: 'Aditya Singhania', b: 2, p: 'Vikram Singhania', ph: '9811223344', tot: 60000, paid: 30000 },
-      { roll: '12002', name: 'Diya Malhotra', b: 2, p: 'Ravi Malhotra', ph: '9811223345', tot: 60000, paid: 60000 },
-      { roll: '12003', name: 'Kavya Nair', b: 2, p: 'Suresh Nair', ph: '9811223346', tot: 60000, paid: 0 },
-      { roll: '13001', name: 'Kabir Mehta', b: 3, p: 'Amit Mehta', ph: '9922334455', tot: 75000, paid: 50000 },
-      { roll: '13002', name: 'Ananya Roy', b: 3, p: 'Pradeep Roy', ph: '9922334456', tot: 75000, paid: 35000 },
-      { roll: '14001', name: 'Manish Kumar', b: 4, p: 'Santosh Kumar', ph: '9733445566', tot: 70000, paid: 70000 },
-      { roll: '14002', name: 'Zoya Khan', b: 4, p: 'Imran Khan', ph: '9733445567', tot: 70000, paid: 20000 }
-    ];
-
-    const insertStudent = db.prepare(`
-      INSERT INTO students (roll_no, name, batch_id, parent_name, parent_phone, total_fee, fees_paid)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    for (const s of seedStudents) {
-      insertStudent.run(s.roll, s.name, s.b, s.p, s.ph, s.tot, s.paid);
-    }
-
-    // Seed initial logs
-    const insertLog = db.prepare(`
-      INSERT INTO activity_logs (staff_name, action_type, description, created_at)
-      VALUES (?, ?, ?, datetime('now', '-20 minutes'))
-    `);
-    insertLog.run('Mr. Jones', 'SYSTEM_INIT', 'System initialized with 10 batches and starter student records');
-    insertLog.run('Staff 1 (Pooja)', 'FEE_UPDATE', 'Staff 1 updated ₹25,000 fees for Rohan Gupta [Batch 1]');
-    insertLog.run('Staff 2 (Ramesh)', 'STUDENT_ADDED', 'Registered new student Sneha Patel [Batch 1]');
+    insertStaff.run('Mr. Roshan Yadav', 'Institute Director (Owner)', '#6366f1');
   }
 
   return {
@@ -175,11 +123,13 @@ function initDb(dbFilePath) {
     },
 
     deleteBatch(id) {
-      const batch = db.prepare('SELECT * FROM batches WHERE id = ?').get(id);
+      const numId = Number(id);
+      const batch = db.prepare('SELECT * FROM batches WHERE id = ?').get(numId);
       if (!batch) return null;
-      db.prepare('UPDATE students SET batch_id = NULL WHERE batch_id = ?').run(id);
-      db.prepare('DELETE FROM attendance WHERE batch_id = ?').run(id);
-      db.prepare('DELETE FROM batches WHERE id = ?').run(id);
+      db.prepare('DELETE FROM attendance WHERE batch_id = ?').run(numId);
+      db.prepare('DELETE FROM fee_transactions WHERE student_id IN (SELECT id FROM students WHERE batch_id = ?)').run(numId);
+      db.prepare('DELETE FROM students WHERE batch_id = ?').run(numId);
+      db.prepare('DELETE FROM batches WHERE id = ?').run(numId);
       return batch;
     },
 
