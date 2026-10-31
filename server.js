@@ -352,6 +352,22 @@ const server = http.createServer(async (req, res) => {
       return res.end(csv);
     }
 
+    // 11. Android TWA Digital Asset Links (Removes Top URL Bar in APK)
+    if (pathname === '/.well-known/assetlinks.json') {
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Access-Control-Allow-Origin': '*'
+      });
+      return res.end(JSON.stringify([{
+        relation: ["delegate_permission/common.handle_all_urls"],
+        target: {
+          namespace: "android_app",
+          package_name: "com.ygtclasses.portal",
+          sha256_cert_fingerprints: ["9A:BD:E5:19:7B:0B:D6:20:27:38:D9:E3:9D:CC:C5:1C:81:36:9B:AA:39:77:01:56:A1:3E:62:76:C6:60:E1:54"]
+        }
+      }]));
+    }
+
     // 11. Static File Serving
     let filePath = path.join(PUBLIC_DIR, pathname === '/' ? 'index.html' : pathname);
     if (!filePath.startsWith(PUBLIC_DIR)) {
