@@ -95,8 +95,226 @@ function initDb(dbFilePath) {
   // Seed default director staff if empty
   const staffCount = db.prepare('SELECT COUNT(*) as count FROM staff').get().count;
   if (staffCount === 0) {
-    const insertStaff = db.prepare('INSERT INTO staff (name, role, avatar_color) VALUES (?, ?, ?)');
-    insertStaff.run('Mr. Roshan Yadav', 'Institute Director (Owner)', '#6366f1');
+    const insertStaff = db.prepare('INSERT INTO staff (name, role, avatar_color, is_owner, pin) VALUES (?, ?, ?, ?, ?)');
+    insertStaff.run('Mr. Roshan Yadav', 'Institute Director (Owner)', '#6366f1', 1, '1234');
+  }
+
+  // 1. Purge legacy demo batches (JEE / NEET) if present in database
+  const legacyCheck = db.prepare("SELECT id FROM batches WHERE name LIKE '%JEE%' OR name LIKE '%NEET%' LIMIT 1").get();
+  if (legacyCheck) {
+    db.exec('DELETE FROM attendance;');
+    db.exec('DELETE FROM fee_transactions;');
+    db.exec('DELETE FROM activity_logs;');
+    db.exec('DELETE FROM students;');
+    db.exec('DELETE FROM batches;');
+  }
+
+  // 2. Ensure official coaching batches & students are seeded if empty
+  const batchCount = db.prepare('SELECT COUNT(*) as count FROM batches').get().count;
+  if (batchCount === 0) {
+    const batchDefs = [
+      { name: 'Non-School', code: 'NON-SCH', fee: 0 },
+      { name: 'Jr. KG', code: 'JR-KG', fee: 0 },
+      { name: 'Sr. KG', code: 'SR-KG', fee: 0 },
+      { name: '1st Std - Class 1', code: 'STD-01', fee: 5000 },
+      { name: '2nd Std - Class 2', code: 'STD-02', fee: 5000 },
+      { name: '5th Std', code: 'STD-05', fee: 0 },
+      { name: '6th Std', code: 'STD-06', fee: 0 },
+      { name: '7th Std', code: 'STD-07', fee: 0 },
+      { name: '8th Std', code: 'STD-08', fee: 0 },
+      { name: '9th Std', code: 'STD-09', fee: 0 },
+      { name: '10th Std', code: 'STD-10', fee: 0 }
+    ];
+
+    const insertB = db.prepare('INSERT INTO batches (name, code, default_fee) VALUES (?, ?, ?)');
+    const bMap = {};
+    for (const b of batchDefs) {
+      const res = insertB.run(b.name, b.code, b.fee);
+      bMap[b.name] = res.lastInsertRowid;
+    }
+
+    const officialRoster = [
+      // Non-School
+      { b: 'Non-School', r: '1', n: 'Aaradhya', t: 0, p: 0 },
+      { b: 'Non-School', r: '2', n: 'Moksh', t: 0, p: 0 },
+      { b: 'Non-School', r: '3', n: 'Naitik', t: 0, p: 0 },
+      { b: 'Non-School', r: '4', n: 'Virat', t: 0, p: 0 },
+
+      // Jr. KG
+      { b: 'Jr. KG', r: '1', n: 'Aarush', t: 0, p: 0 },
+      { b: 'Jr. KG', r: '2', n: 'Aarushi', t: 0, p: 0 },
+      { b: 'Jr. KG', r: '3', n: 'Aatif', t: 0, p: 0 },
+      { b: 'Jr. KG', r: '4', n: 'Advik', t: 0, p: 0 },
+      { b: 'Jr. KG', r: '5', n: 'Anshu', t: 0, p: 0 },
+      { b: 'Jr. KG', r: '6', n: 'Anurag', t: 0, p: 0 },
+      { b: 'Jr. KG', r: '7', n: 'Karthik', t: 0, p: 0 },
+      { b: 'Jr. KG', r: '8', n: 'Naira', t: 0, p: 0 },
+      { b: 'Jr. KG', r: '9', n: 'Ovi', t: 0, p: 0 },
+      { b: 'Jr. KG', r: '10', n: 'Shivanshi', t: 0, p: 0 },
+
+      // Sr. KG
+      { b: 'Sr. KG', r: '1', n: 'Ananya', t: 0, p: 0 },
+      { b: 'Sr. KG', r: '2', n: 'Anvi', t: 0, p: 0 },
+      { b: 'Sr. KG', r: '3', n: 'Kunal', t: 0, p: 0 },
+      { b: 'Sr. KG', r: '4', n: 'Sanchit', t: 0, p: 0 },
+      { b: 'Sr. KG', r: '5', n: 'Shivanya', t: 0, p: 0 },
+
+      // 1st Std - Class 1
+      { b: '1st Std - Class 1', r: '1', n: 'Aarushi Chauhan', t: 5000, p: 0 },
+      { b: '1st Std - Class 1', r: '2', n: 'Aryan Pandey', t: 5000, p: 0 },
+      { b: '1st Std - Class 1', r: '3', n: 'Kanak', t: 5000, p: 0 },
+      { b: '1st Std - Class 1', r: '4', n: 'Kanishk Yadav', t: 5000, p: 0 },
+      { b: '1st Std - Class 1', r: '5', n: 'Pranay', t: 5000, p: 0 },
+      { b: '1st Std - Class 1', r: '6', n: 'Riddhi Chauhan', t: 5000, p: 1000 },
+      { b: '1st Std - Class 1', r: '7', n: 'Riyansh Karmode', t: 5000, p: 0 },
+      { b: '1st Std - Class 1', r: '8', n: 'Samarth Waikar', t: 5000, p: 0 },
+      { b: '1st Std - Class 1', r: '9', n: 'Siddharth', t: 5000, p: 0 },
+      { b: '1st Std - Class 1', r: '10', n: 'Vibha Sakpal', t: 5000, p: 0 },
+      { b: '1st Std - Class 1', r: '11', n: 'Yash Yadav', t: 5000, p: 0 },
+
+      // 2nd Std - Class 2
+      { b: '2nd Std - Class 2', r: '1', n: 'Aarav Tripathi', t: 5000, p: 0 },
+      { b: '2nd Std - Class 2', r: '2', n: 'Akhil', t: 5000, p: 0 },
+      { b: '2nd Std - Class 2', r: '3', n: 'Ananya Pasi', t: 5000, p: 1000 },
+      { b: '2nd Std - Class 2', r: '4', n: 'Ananya Yadav', t: 5000, p: 0 },
+      { b: '2nd Std - Class 2', r: '5', n: 'Asad Shaikh', t: 5000, p: 0 },
+      { b: '2nd Std - Class 2', r: '6', n: 'Devansh More', t: 5000, p: 0 },
+      { b: '2nd Std - Class 2', r: '7', n: 'Hardit', t: 5000, p: 0 },
+      { b: '2nd Std - Class 2', r: '8', n: 'Manas', t: 5000, p: 0 },
+      { b: '2nd Std - Class 2', r: '9', n: 'Mrudul Kadam', t: 5000, p: 1000 },
+      { b: '2nd Std - Class 2', r: '10', n: 'Mrunmayi Lande', t: 5000, p: 0 },
+      { b: '2nd Std - Class 2', r: '11', n: 'Najis', t: 5000, p: 0 },
+      { b: '2nd Std - Class 2', r: '12', n: 'Renuvanshikumari', t: 5000, p: 0 },
+      { b: '2nd Std - Class 2', r: '13', n: 'Shivansh', t: 5000, p: 0 },
+      { b: '2nd Std - Class 2', r: '14', n: 'Shivanya More', t: 5000, p: 0 },
+      { b: '2nd Std - Class 2', r: '15', n: 'Shreya Maurya', t: 5000, p: 0 },
+      { b: '2nd Std - Class 2', r: '16', n: 'Tanishq Tambe', t: 5000, p: 1000 },
+      { b: '2nd Std - Class 2', r: '17', n: 'Urvi Dhotre', t: 5000, p: 0 },
+      { b: '2nd Std - Class 2', r: '18', n: 'Urvi S.', t: 5000, p: 0 },
+
+      // 5th Std
+      { b: '5th Std', r: '1', n: 'Aadarsh Yadav', t: 0, p: 0 },
+      { b: '5th Std', r: '2', n: 'Ananya Mishra', t: 0, p: 0 },
+      { b: '5th Std', r: '3', n: 'Anshuman', t: 1600, p: 0 },
+      { b: '5th Std', r: '4', n: 'Atul Yadav', t: 0, p: 0 },
+      { b: '5th Std', r: '5', n: 'Daksh Sawant', t: 0, p: 0 },
+      { b: '5th Std', r: '6', n: 'Jagdheshwari', t: 4000, p: 0 },
+      { b: '5th Std', r: '7', n: 'Joshwa H.', t: 4100, p: 0 },
+      { b: '5th Std', r: '8', n: 'Kanak Y.', t: 5000, p: 0 },
+      { b: '5th Std', r: '9', n: 'Manisha C.', t: 3600, p: 0 },
+      { b: '5th Std', r: '10', n: 'Omkar More', t: 3000, p: 0 },
+      { b: '5th Std', r: '11', n: 'Ragini Chauhan', t: 3000, p: 0 },
+      { b: '5th Std', r: '12', n: 'Sahil Shaikh', t: 5600, p: 0 },
+      { b: '5th Std', r: '13', n: 'Shaurya K.', t: 4600, p: 0 },
+      { b: '5th Std', r: '14', n: 'Siddharth Yadav', t: 5600, p: 0 },
+      { b: '5th Std', r: '15', n: 'Smarnika A.', t: 3600, p: 0 },
+      { b: '5th Std', r: '16', n: 'Utsav Pal', t: 2000, p: 0 },
+      { b: '5th Std', r: '17', n: 'Viraj Jadhav', t: 3600, p: 0 },
+      { b: '5th Std', r: '18', n: 'Viral Tambe', t: 2600, p: 0 },
+      { b: '5th Std', r: '19', n: 'Virat Yadav', t: 3600, p: 0 },
+      { b: '5th Std', r: '20', n: 'Yash Nishad', t: 4600, p: 0 },
+
+      // 6th Std
+      { b: '6th Std', r: '1', n: 'Aarohi Prajapati', t: 4200, p: 0 },
+      { b: '6th Std', r: '2', n: 'Abhishek Gupta', t: 6200, p: 0 },
+      { b: '6th Std', r: '3', n: 'Anant Mishra', t: 0, p: 0 },
+      { b: '6th Std', r: '4', n: 'Ansh Yadav', t: 5200, p: 0 },
+      { b: '6th Std', r: '5', n: 'Anushka Sakpal', t: 2200, p: 0 },
+      { b: '6th Std', r: '6', n: 'Arnav Yadav', t: 0, p: 0 },
+      { b: '6th Std', r: '7', n: 'Avantika Ram', t: 0, p: 0 },
+      { b: '6th Std', r: '8', n: 'Avi Yadav', t: 5200, p: 0 },
+      { b: '6th Std', r: '9', n: 'Hritwik Waghmare', t: 3700, p: 0 },
+      { b: '6th Std', r: '10', n: 'Ishita Yadav', t: 5000, p: 0 },
+      { b: '6th Std', r: '11', n: 'Kevailya Jadhav', t: 6700, p: 0 },
+      { b: '6th Std', r: '12', n: 'Nayan Pashte', t: 3000, p: 0 },
+      { b: '6th Std', r: '13', n: 'Ovi Wadkar', t: 4200, p: 0 },
+      { b: '6th Std', r: '14', n: 'Pranav Pandey', t: 0, p: 0 },
+      { b: '6th Std', r: '15', n: 'Rishika Yadav', t: 3200, p: 0 },
+      { b: '6th Std', r: '16', n: 'Rohan Jaiswar', t: 4500, p: 0 },
+      { b: '6th Std', r: '17', n: 'Rudra Surve', t: 4500, p: 0 },
+      { b: '6th Std', r: '18', n: 'Sarthak Dubey', t: 4000, p: 0 },
+      { b: '6th Std', r: '19', n: 'Shagun Yadav', t: 4000, p: 0 },
+      { b: '6th Std', r: '20', n: 'Soham Jaid', t: 4200, p: 0 },
+
+      // 7th Std
+      { b: '7th Std', r: '1', n: 'Aayush Kushwaha', t: 5700, p: 0 },
+      { b: '7th Std', r: '2', n: 'Abhinav Yadav', t: 0, p: 0 },
+      { b: '7th Std', r: '3', n: 'Adarsh', t: 7800, p: 0 },
+      { b: '7th Std', r: '4', n: 'Ajinkya Shinde', t: 7800, p: 0 },
+      { b: '7th Std', r: '5', n: 'Ayan Shaikh', t: 6800, p: 0 },
+      { b: '7th Std', r: '6', n: 'Bilal Makandar', t: 0, p: 0 },
+      { b: '7th Std', r: '7', n: 'Dev Sharma', t: 6300, p: 0 },
+      { b: '7th Std', r: '8', n: 'Dhanshree', t: 4800, p: 0 },
+      { b: '7th Std', r: '9', n: 'Ibrahim', t: 5800, p: 0 },
+      { b: '7th Std', r: '10', n: 'Janvi', t: 4800, p: 0 },
+      { b: '7th Std', r: '11', n: 'Mayank', t: 5400, p: 0 },
+      { b: '7th Std', r: '12', n: 'Pranit', t: 3000, p: 0 },
+      { b: '7th Std', r: '13', n: 'Riya', t: 6000, p: 0 },
+      { b: '7th Std', r: '14', n: 'Rudra', t: 7800, p: 0 },
+      { b: '7th Std', r: '15', n: 'Samarth', t: 5800, p: 0 },
+      { b: '7th Std', r: '16', n: 'Saras', t: 7000, p: 0 },
+      { b: '7th Std', r: '17', n: 'Shivam', t: 6500, p: 0 },
+      { b: '7th Std', r: '18', n: 'Shivansh', t: 5800, p: 0 },
+      { b: '7th Std', r: '19', n: 'Tannu', t: 7500, p: 0 },
+      { b: '7th Std', r: '20', n: 'Viraj', t: 0, p: 0 },
+      { b: '7th Std', r: '21', n: 'Vivek', t: 6500, p: 0 },
+
+      // 8th Std
+      { b: '8th Std', r: '1', n: 'Anit Yadav', t: 5000, p: 0 },
+      { b: '8th Std', r: '2', n: 'Anshika Yadav', t: 0, p: 0 },
+      { b: '8th Std', r: '3', n: 'Ashish Houmbale', t: 7000, p: 0 },
+      { b: '8th Std', r: '4', n: 'Dilesh Yadav', t: 8500, p: 0 },
+      { b: '8th Std', r: '5', n: 'Janvi Ram', t: 0, p: 0 },
+      { b: '8th Std', r: '6', n: 'Laksh Yadav', t: 0, p: 0 },
+      { b: '8th Std', r: '7', n: 'Mangalam Dubey', t: 6000, p: 0 },
+      { b: '8th Std', r: '8', n: 'Pradnesh Pawar', t: 6000, p: 0 },
+      { b: '8th Std', r: '9', n: 'Princy Pal', t: 6000, p: 0 },
+      { b: '8th Std', r: '10', n: 'Priya Sutar', t: 5500, p: 0 },
+      { b: '8th Std', r: '11', n: 'Rishabh Yadav', t: 0, p: 0 },
+      { b: '8th Std', r: '12', n: 'Simon Pal', t: 4000, p: 0 },
+
+      // 9th Std
+      { b: '9th Std', r: '1', n: 'Aryan Dhanraj', t: 9300, p: 0 },
+      { b: '9th Std', r: '2', n: 'Neeraj Yadav', t: 0, p: 0 },
+      { b: '9th Std', r: '3', n: 'Pritam Shukla', t: 9000, p: 0 },
+      { b: '9th Std', r: '4', n: 'Raunak Yadav', t: 8000, p: 0 },
+      { b: '9th Std', r: '5', n: 'Shlok Shukla', t: 0, p: 0 },
+      { b: '9th Std', r: '6', n: 'Yash Yadav', t: 0, p: 0 },
+
+      // 10th Std
+      { b: '10th Std', r: '1', n: 'Aryan Jha', t: 0, p: 0 },
+      { b: '10th Std', r: '2', n: 'Krishna Shukla', t: 13000, p: 0 },
+      { b: '10th Std', r: '3', n: 'Namasvi Rajbhar', t: 15000, p: 0 },
+      { b: '10th Std', r: '4', n: 'Nirmala', t: 0, p: 0 },
+      { b: '10th Std', r: '5', n: 'Priya Gupta', t: 13000, p: 0 },
+      { b: '10th Std', r: '6', n: 'Sai Mane', t: 13000, p: 0 }
+    ];
+
+    const insertS = db.prepare(`
+      INSERT INTO students (roll_no, name, batch_id, total_fee, fees_paid, parent_phone, notes)
+      VALUES (?, ?, ?, ?, ?, '', 'Official Coaching Roster')
+    `);
+    const insertFee = db.prepare(`
+      INSERT INTO fee_transactions (student_id, amount, payment_date, payment_mode, reference_no, staff_name, notes)
+      VALUES (?, ?, datetime('now', 'localtime'), 'Admission / Cash', 'INIT-' || ?, 'Mr. Roshan Yadav', 'Initial admission payment recorded')
+    `);
+
+    for (const s of officialRoster) {
+      const bId = bMap[s.b];
+      if (!bId) continue;
+      const res = insertS.run(s.r, s.n, bId, s.t, s.p);
+      if (s.p > 0) {
+        insertFee.run(res.lastInsertRowid, s.p, res.lastInsertRowid);
+      }
+    }
+
+    db.prepare(`
+      INSERT INTO activity_logs (staff_name, action_type, description)
+      VALUES (?, 'ROSTER_IMPORT', ?)
+    `).run(
+      'Mr. Roshan Yadav',
+      `Mr. Roshan Yadav loaded official coaching roster: ${officialRoster.length} students across ${batchDefs.length} batches`
+    );
   }
 
   return {
