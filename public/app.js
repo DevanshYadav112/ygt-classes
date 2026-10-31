@@ -64,6 +64,7 @@ const state = {
   currentStaff: localStorage.getItem('ygt_staff') || localStorage.getItem('violet_staff') || 'Mr. Jones',
   currentRole: localStorage.getItem('ygt_role') || localStorage.getItem('violet_role') || 'Director / Admin',
   batches: [],
+  activeView: 'dashboard',
   activeTab: 'tab-pending-fees',
   students: [],
   pendingStudents: [],
@@ -105,6 +106,8 @@ const elements = {
   bannerStaffName: document.getElementById('bannerStaffName'),
   currentDateStr: document.getElementById('currentDateStr'),
   staffProfileBtn: document.getElementById('staffProfileBtn'),
+  themeToggleBtn: document.getElementById('themeToggleBtn'),
+  themeToggleIcon: document.getElementById('themeToggleIcon'),
   menuToggleBtn: document.getElementById('menuToggleBtn'),
   navDrawer: document.getElementById('navDrawer'),
   drawerOverlay: document.getElementById('drawerOverlay'),
@@ -134,6 +137,19 @@ const elements = {
   badgePendingCount: document.getElementById('badgePendingCount'),
   badgeTotalStudents: document.getElementById('badgeTotalStudents'),
   pendingTabTotalSum: document.getElementById('pendingTabTotalSum'),
+
+  // View Containers & Controls
+  welcomeBannerSection: document.getElementById('welcomeBannerSection'),
+  statsGridSection: document.getElementById('statsGridSection'),
+  homeDrawerHintCard: document.getElementById('homeDrawerHintCard'),
+  mainTabsSection: document.getElementById('mainTabsSection'),
+  activeViewHeader: document.getElementById('activeViewHeader'),
+  activeViewTitle: document.getElementById('activeViewTitle'),
+  btnBackToHome: document.getElementById('btnBackToHome'),
+  hintOpenDrawerBtn: document.getElementById('hintOpenDrawerBtn'),
+  drawerBadgePending: document.getElementById('drawerBadgePending'),
+  drawerBadgeStudents: document.getElementById('drawerBadgeStudents'),
+  drawerStaffTag: document.getElementById('drawerStaffTag'),
 
   // Tabs & Filters
   tabButtons: document.querySelectorAll('.tab-btn'),
@@ -302,6 +318,65 @@ async function openStaffModal() {
 }
 
 // ==========================================================
+// 1B. THEME SWITCHER (APPLE LIGHT / DARK MODE)
+// ==========================================================
+function updateThemeIcon(theme) {
+  if (!elements.themeToggleIcon) return;
+  if (theme === 'dark') {
+    elements.themeToggleIcon.innerHTML = `
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    `;
+    if (elements.themeToggleBtn) elements.themeToggleBtn.setAttribute('title', 'Switch to Light Mode');
+  } else {
+    elements.themeToggleIcon.innerHTML = `
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    `;
+    if (elements.themeToggleBtn) elements.themeToggleBtn.setAttribute('title', 'Switch to Dark Mode');
+  }
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('ygt_theme');
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const initialTheme = saved || (prefersDark ? 'dark' : 'light');
+  
+  document.documentElement.setAttribute('data-theme', initialTheme);
+  document.body.setAttribute('data-theme', initialTheme);
+  updateThemeIcon(initialTheme);
+
+  if (elements.themeToggleBtn) {
+    elements.themeToggleBtn.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      document.body.setAttribute('data-theme', next);
+      localStorage.setItem('ygt_theme', next);
+      updateThemeIcon(next);
+      showToast(`${next === 'dark' ? '🌙 Dark' : '☀️ Light'} mode activated`, 'info');
+    });
+  }
+
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      if (!localStorage.getItem('ygt_theme')) {
+        const next = e.matches ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', next);
+        document.body.setAttribute('data-theme', next);
+        updateThemeIcon(next);
+      }
+    });
+  }
+}
+
+// ==========================================================
 // 2. REAL-TIME SERVER-SENT EVENTS (SSE) & LIVE SIDE LOG
 // ==========================================================
 function initRealtimeSync() {
@@ -419,6 +494,9 @@ async function refreshDashboard() {
     elements.badgePendingCount.textContent = stats.pendingStudentsCount;
     elements.badgeTotalStudents.textContent = stats.totalStudents;
     elements.pendingTabTotalSum.textContent = formatCurrency(stats.totalPending);
+    if (elements.drawerBadgePending) elements.drawerBadgePending.textContent = stats.pendingStudentsCount;
+    if (elements.drawerBadgeStudents) elements.drawerBadgeStudents.textContent = stats.totalStudents;
+    if (elements.drawerStaffTag) elements.drawerStaffTag.textContent = `Staff: ${state.currentStaff}`;
 
     // Populate batch selects
     populateBatchDropdowns();
@@ -1209,8 +1287,34 @@ elements.studentEditForm.addEventListener('submit', async e => {
 });
 
 // ==========================================================
-// 12. TABS & NAVIGATION CONTROL
+// 12. VIEWS, TABS & DRAWER NAVIGATION CONTROL
 // ==========================================================
+function switchView(viewName) {
+  state.activeView = viewName;
+  const isDashboard = viewName === 'dashboard';
+
+  if (elements.welcomeBannerSection) elements.welcomeBannerSection.style.display = isDashboard ? '' : 'none';
+  if (elements.statsGridSection) elements.statsGridSection.style.display = isDashboard ? '' : 'none';
+  if (elements.homeDrawerHintCard) elements.homeDrawerHintCard.style.display = isDashboard ? '' : 'none';
+  if (elements.mainTabsSection) elements.mainTabsSection.style.display = isDashboard ? 'none' : 'flex';
+
+  document.querySelectorAll('.drawer-link[data-view]').forEach(link => {
+    link.classList.toggle('active', link.getAttribute('data-view') === viewName);
+  });
+
+  if (isDashboard) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
+  if (viewName === 'pending-fees') switchTab('tab-pending-fees');
+  else if (viewName === 'batches') switchTab('tab-batches');
+  else if (viewName === 'students') switchTab('tab-students');
+  else if (viewName === 'attendance') switchTab('tab-attendance');
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 function switchTab(tabId) {
   state.activeTab = tabId;
   elements.tabButtons.forEach(btn => {
@@ -1220,15 +1324,32 @@ function switchTab(tabId) {
     pane.classList.toggle('active', pane.id === tabId);
   });
 
-  if (tabId === 'tab-pending-fees') loadPendingFees();
-  else if (tabId === 'tab-batches') renderBatchesGrid();
-  else if (tabId === 'tab-students') loadAllStudents();
-  else if (tabId === 'tab-attendance') loadBatchAttendance();
+  if (tabId === 'tab-pending-fees') {
+    if (elements.activeViewTitle) elements.activeViewTitle.textContent = '💰 Fees Pending Register';
+    loadPendingFees();
+  } else if (tabId === 'tab-batches') {
+    if (elements.activeViewTitle) elements.activeViewTitle.textContent = '🎓 Batches Management (10 Batches)';
+    renderBatchesGrid();
+  } else if (tabId === 'tab-students') {
+    if (elements.activeViewTitle) elements.activeViewTitle.textContent = '👥 All Students Directory';
+    loadAllStudents();
+  } else if (tabId === 'tab-attendance') {
+    if (elements.activeViewTitle) elements.activeViewTitle.textContent = '📋 Daily Attendance Register';
+    loadBatchAttendance();
+  }
 }
 
 elements.tabButtons.forEach(btn => {
   btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
 });
+
+if (elements.btnBackToHome) {
+  elements.btnBackToHome.addEventListener('click', () => switchView('dashboard'));
+}
+
+if (elements.hintOpenDrawerBtn) {
+  elements.hintOpenDrawerBtn.addEventListener('click', () => toggleDrawer(true));
+}
 
 elements.filterBatchSelect.addEventListener('change', () => {
   state.currentPage = 1;
@@ -1260,12 +1381,8 @@ document.querySelectorAll('.drawer-link[data-view]').forEach(link => {
   link.addEventListener('click', e => {
     e.preventDefault();
     toggleDrawer(false);
-    const view = link.getAttribute('data-view');
-    if (view === 'pending-fees') switchTab('tab-pending-fees');
-    else if (view === 'batches') switchTab('tab-batches');
-    else if (view === 'students') switchTab('tab-students');
-    else if (view === 'attendance') switchTab('tab-attendance');
-    else switchTab('tab-pending-fees');
+    const view = link.getAttribute('data-view') || 'dashboard';
+    switchView(view);
   });
 });
 
@@ -1312,13 +1429,13 @@ document.querySelectorAll('.log-filter-chip').forEach(chip => {
   });
 });
 
-// Hero Buttons
+// Hero & Card Action Buttons
 document.getElementById('openUploadModalBtn').addEventListener('click', () => openModal('uploadModal'));
 document.getElementById('quickSampleCsvBtn').addEventListener('click', () => {
   window.location.href = '/api/sample-csv';
 });
-document.getElementById('jumpToPendingTabBtn').addEventListener('click', () => switchTab('tab-pending-fees'));
-document.getElementById('jumpToAttendanceBtn').addEventListener('click', () => switchTab('tab-attendance'));
+document.getElementById('jumpToPendingTabBtn').addEventListener('click', () => switchView('pending-fees'));
+document.getElementById('jumpToAttendanceBtn').addEventListener('click', () => switchView('attendance'));
 document.getElementById('quickAddStudentBtn').addEventListener('click', () => openNewStudentModal());
 document.getElementById('btnDirectoryAddStudent').addEventListener('click', () => openNewStudentModal());
 document.getElementById('btnCreateNewBatch').addEventListener('click', () => openModal('batchModal'));
@@ -1668,6 +1785,7 @@ function initDeviceSimulator() {
 // 16. INITIALIZATION
 // ==========================================================
 window.addEventListener('DOMContentLoaded', async () => {
+  initTheme();
   initSplashScreen();
   initDeviceSimulator();
 

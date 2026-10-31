@@ -5,14 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>YGT Classes - Staff Database & Operations Suite</title>
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#0b1120">
+  <meta name="theme-color" content="#F5F5F7">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="icon" type="image/svg+xml" href="/icon.svg">
   <link rel="stylesheet" href="style.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 </head>
 <body>
   <!-- Animated Splash & Loading Screen with "Thought of the Day" -->
@@ -149,11 +146,11 @@
 
             <div class="logo-box">
               <div class="logo-icon ygt-nav-badge">
-                <svg width="28" height="28" viewBox="0 0 36 36" fill="none">
-                  <rect width="36" height="36" rx="10" fill="#4f46e5"/>
-                  <ellipse cx="18" cy="18" rx="13" ry="5.5" stroke="#38bdf8" stroke-width="1.8" transform="rotate(-30 18 18)"/>
-                  <ellipse cx="18" cy="18" rx="13" ry="5.5" stroke="#ec4899" stroke-width="1.8" transform="rotate(30 18 18)"/>
-                  <circle cx="18" cy="18" r="3.5" fill="#fbbf24"/>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                  <rect width="24" height="24" rx="6" fill="#0071E3"/>
+                  <ellipse cx="12" cy="12" rx="8.5" ry="3.5" stroke="#FFFFFF" stroke-width="1.4" transform="rotate(-30 12 12)"/>
+                  <ellipse cx="12" cy="12" rx="8.5" ry="3.5" stroke="#FFFFFF" stroke-width="1.4" transform="rotate(30 12 12)"/>
+                  <circle cx="12" cy="12" r="2" fill="#FFFFFF"/>
                 </svg>
               </div>
               <span class="logo-title">YGT Classes</span>
@@ -181,8 +178,23 @@
             <div id="searchResultsDropdown" class="search-dropdown" style="display: none;"></div>
           </div>
 
-          <!-- Navigation Right: Search Icon + Name/Avatar Icon -->
+          <!-- Navigation Right: Theme Toggle + Search Icon + Name/Avatar Icon -->
           <div class="nav-right">
+            <!-- Theme Toggle Button (Light/Dark Mode) -->
+            <button id="themeToggleBtn" class="icon-btn theme-toggle-btn" title="Toggle Light / Dark Mode" type="button" aria-label="Toggle Theme">
+              <svg id="themeToggleIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+            </button>
+
             <!-- Search Icon Button (Next to Avatar Icon as requested) -->
             <button id="headerSearchToggleBtn" class="icon-btn search-toggle-btn" title="Search students" type="button" aria-label="Search">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -228,75 +240,104 @@
             <circle cx="18" cy="18" r="3.5" fill="#fbbf24"/>
           </svg>
         </div>
-        <h3>YGT Classes</h3>
+        <div>
+          <h3>YGT Classes</h3>
+          <span class="drawer-staff-tag" id="drawerStaffTag">Staff: Mr. Jones</span>
+        </div>
       </div>
       <button id="closeDrawerBtn" class="icon-btn" aria-label="Close Menu">✕</button>
     </div>
 
     <div class="drawer-content">
-      <div class="drawer-section-title">PRIMARY NAVIGATION</div>
+      <div class="drawer-section-title">📊 ACADEMIC REGISTERS</div>
       <ul class="drawer-links">
         <li>
           <a href="#" class="drawer-link active" data-view="dashboard">
-            <span class="drawer-icon">🏠</span> Home Dashboard
+            <div class="drawer-link-left">
+              <span class="drawer-icon">🏠</span> 
+              <span>Home Dashboard</span>
+            </div>
+            <span class="drawer-badge-pill green">Overview</span>
           </a>
         </li>
         <li>
           <a href="#" class="drawer-link" data-view="pending-fees">
-            <span class="drawer-icon">💰</span> Fees Pending Register
-          </a>
-        </li>
-        <li>
-          <a href="#" class="drawer-link" data-view="batches">
-            <span class="drawer-icon">🎓</span> Batches Management
+            <div class="drawer-link-left">
+              <span class="drawer-icon">💰</span> 
+              <span>Fees Pending Register</span>
+            </div>
+            <span class="badge-counter badge-danger drawer-badge" id="drawerBadgePending">0</span>
           </a>
         </li>
         <li>
           <a href="#" class="drawer-link" data-view="attendance">
-            <span class="drawer-icon">📋</span> Daily Attendance Register
+            <div class="drawer-link-left">
+              <span class="drawer-icon">📋</span> 
+              <span>Daily Attendance Register</span>
+            </div>
+            <span class="drawer-badge-pill green">Daily</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" class="drawer-link" data-view="batches">
+            <div class="drawer-link-left">
+              <span class="drawer-icon">🎓</span> 
+              <span>Batches Management</span>
+            </div>
+            <span class="drawer-badge-pill blue">10 Batches</span>
           </a>
         </li>
         <li>
           <a href="#" class="drawer-link" data-view="students">
-            <span class="drawer-icon">👥</span> All Students Directory
+            <div class="drawer-link-left">
+              <span class="drawer-icon">👥</span> 
+              <span>All Students Directory</span>
+            </div>
+            <span class="badge-counter drawer-badge" id="drawerBadgeStudents">0</span>
           </a>
         </li>
       </ul>
 
-      <div class="drawer-section-title">QUICK ACTIONS</div>
+      <div class="drawer-section-title">⚡ QUICK ACTIONS & ADMISSION</div>
       <ul class="drawer-links">
         <li>
-          <button class="drawer-action-btn primary" id="drawerUploadBtn">
+          <button class="drawer-action-btn primary" id="drawerUploadBtn" type="button">
             <span>📥</span> Upload Batch Excel (.xlsx / .csv)
           </button>
         </li>
         <li>
-          <button class="drawer-action-btn" id="drawerAddStudentBtn">
+          <button class="drawer-action-btn" id="drawerAddStudentBtn" type="button">
             <span>➕</span> Enroll New Student
           </button>
         </li>
         <li>
-          <button class="drawer-action-btn" id="drawerAddBatchBtn">
+          <button class="drawer-action-btn" id="drawerAddBatchBtn" type="button">
             <span>🏛️</span> Create New Batch
           </button>
         </li>
         <li>
-          <button class="drawer-action-btn" id="drawerDownloadTemplateBtn">
+          <button class="drawer-action-btn" id="drawerDownloadTemplateBtn" type="button">
             <span>📄</span> Download Excel Template
           </button>
         </li>
       </ul>
 
-      <div class="drawer-section-title">STAFF & AUDIT</div>
+      <div class="drawer-section-title">🔒 STAFF & AUDIT CONTROLS</div>
       <ul class="drawer-links">
         <li>
           <a href="#" class="drawer-link" id="drawerOpenStaffBtn">
-            <span class="drawer-icon">👨‍💼</span> Multi-Staff Switcher
+            <div class="drawer-link-left">
+              <span class="drawer-icon">👨‍💼</span> 
+              <span>Switch Staff / Roles</span>
+            </div>
           </a>
         </li>
         <li>
           <a href="#" class="drawer-link" id="drawerOpenSideLogBtn">
-            <span class="drawer-icon">📜</span> Full Audit History
+            <div class="drawer-link-left">
+              <span class="drawer-icon">📜</span> 
+              <span>Live Audit & Payment Log</span>
+            </div>
           </a>
         </li>
       </ul>
@@ -311,247 +352,156 @@
   <!-- Main Container -->
   <div class="app-layout">
     <main class="main-content">
-      <!-- Welcome Hero Banner with Cartoon Science & Teacher Scene -->
-      <section class="welcome-banner">
-        <div class="welcome-info">
-          <div class="welcome-badge-brand">
-            <span>🔬</span> YGT Classes Academic Portal
+      <!-- Refined Dashboard Header (Apple-Inspired Minimalist Design) -->
+      <section class="welcome-banner" id="welcomeBannerSection">
+        <div class="welcome-intro-block">
+          <div class="welcome-kicker-row">
+            <span class="portal-kicker">YGT CLASSES · ACADEMIC PORTAL</span>
+            <span class="live-sync-pill"><span class="pulse-dot"></span> Live Staff Sync</span>
           </div>
+          
           <h1 class="welcome-heading">
-            <span id="bannerGreeting">Good Evening</span>, <span id="bannerStaffName" class="gradient-text">Mr. Jones</span>
+            <span class="greeting-prefix" id="bannerGreeting">Good afternoon</span>,
+            <span class="staff-display-name" id="bannerStaffName">Mr. Jones</span>
           </h1>
+          
           <p class="welcome-sub">
-            YGT Classes Database • <span id="currentDateStr">Wednesday, Oct 28, 2026</span> • Real-time staff sync
+            <span id="currentDateStr">Wednesday, Oct 28, 2026</span> • Managing 10 coaching batches (~2,000 students)
           </p>
 
-          <!-- Dashboard Inline Thought of the Day Widget -->
-          <div class="dashboard-thought-widget">
-            <span class="thought-widget-icon">💡</span>
-            <div class="thought-widget-content">
-              <p class="thought-widget-quote" id="dashThoughtQuote">"Learning gives creativity, creativity leads to thinking, thinking provides knowledge, knowledge makes you great."</p>
-              <span class="thought-widget-author" id="dashThoughtAuthor">— Dr. A.P.J. Abdul Kalam</span>
+          <!-- Daily Educational Quote Tile (Apple Minimal Style) -->
+          <div class="daily-quote-card" id="dashThoughtWidget">
+            <div class="quote-header">
+              <div class="quote-tag-wrap">
+                <svg class="quote-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/>
+                </svg>
+                <span class="quote-tag">Daily Thought</span>
+              </div>
+              <button class="btn-quote-refresh" id="dashRefreshThoughtBtn" title="Show another inspiring thought" type="button" aria-label="Refresh quote">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                <span>New</span>
+              </button>
             </div>
-            <button class="btn-mini-refresh-thought" id="dashRefreshThoughtBtn" title="Next Thought of the Day" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-            </button>
+            <p class="quote-text" id="dashThoughtQuote">"Learning gives creativity, creativity leads to thinking, thinking provides knowledge, knowledge makes you great."</p>
+            <span class="quote-author" id="dashThoughtAuthor">— Dr. A.P.J. Abdul Kalam</span>
           </div>
 
-          <div class="welcome-actions" style="margin-top: 0.5rem;">
-            <button class="btn btn-outline" id="quickSampleCsvBtn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              Excel Template
+          <!-- Primary & Secondary Actions: Excel Template & Batch Upload -->
+          <div class="welcome-actions">
+            <button class="btn btn-primary" id="openUploadModalBtn" type="button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span>Upload Batch Excel</span>
             </button>
-            <button class="btn btn-primary" id="openUploadModalBtn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-              Upload Batch Excel
+            <button class="btn btn-secondary" id="quickSampleCsvBtn" type="button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Excel Template</span>
             </button>
           </div>
-        </div>
-
-        <!-- Cartoon Science Laboratory & Teacher Scene Graphic -->
-        <div class="cartoon-science-scene" aria-label="Science Education Cartoon Scene">
-          <svg width="280" height="190" viewBox="0 0 320 220" fill="none" class="cartoon-teacher-svg">
-            <defs>
-              <linearGradient id="chalkGrad" x1="0" y1="0" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#1e293b"/>
-                <stop offset="100%" stop-color="#0f172a"/>
-              </linearGradient>
-              <linearGradient id="flaskGrad" x1="0" y1="0" x2="0" y2="100%">
-                <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.8"/>
-                <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.95"/>
-              </linearGradient>
-              <linearGradient id="coatGrad" x1="0" y1="0" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#ffffff"/>
-                <stop offset="100%" stop-color="#e2e8f0"/>
-              </linearGradient>
-            </defs>
-
-            <!-- Classroom Chalkboard Frame -->
-            <rect x="15" y="15" width="180" height="120" rx="10" fill="#78350f" stroke="#92400e" stroke-width="4"/>
-            <rect x="23" y="23" width="164" height="104" rx="6" fill="url(#chalkGrad)"/>
-
-            <!-- Chalkboard Science Notes (Formulas & Sketches) -->
-            <text x="35" y="52" font-family="'JetBrains Mono', monospace" font-size="14" font-weight="700" fill="#fef08a" letter-spacing="1">E = mc²</text>
-            <!-- Atom sketch on board -->
-            <ellipse cx="140" cy="50" rx="18" ry="7" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="2,2" transform="rotate(-25 140 50)"/>
-            <ellipse cx="140" cy="50" rx="18" ry="7" fill="none" stroke="#f472b6" stroke-width="1.5" stroke-dasharray="2,2" transform="rotate(25 140 50)"/>
-            <circle cx="140" cy="50" r="3" fill="#fbbf24"/>
-            
-            <!-- F = ma & lambda*nu = c -->
-            <text x="35" y="80" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="600" fill="#67e8f9">F = m·a</text>
-            <text x="35" y="104" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="500" fill="#e2e8f0">λ·ν = c  ∫dx</text>
-            <!-- Chalkboard chalk & duster -->
-            <rect x="145" y="118" width="18" height="5" rx="2" fill="#e2e8f0"/>
-            <rect x="125" y="117" width="16" height="6" rx="2" fill="#d97706"/>
-
-            <!-- Floating 3D Atom Model above Scene -->
-            <g transform="translate(190, 30)" class="anim-atom-spin">
-              <ellipse cx="0" cy="0" rx="26" ry="10" fill="none" stroke="#38bdf8" stroke-width="2" transform="rotate(-30)"/>
-              <ellipse cx="0" cy="0" rx="26" ry="10" fill="none" stroke="#ec4899" stroke-width="2" transform="rotate(30)"/>
-              <ellipse cx="0" cy="0" rx="26" ry="10" fill="none" stroke="#10b981" stroke-width="1.8"/>
-              <circle cx="0" cy="0" r="5" fill="#fbbf24"/>
-              <circle cx="20" cy="-10" r="3" fill="#38bdf8"/>
-              <circle cx="-18" cy="12" r="3" fill="#ec4899"/>
-            </g>
-
-            <!-- Friendly Science Teacher Character (Cartoon) -->
-            <g class="anim-teacher-float">
-              <!-- Lab Bench -->
-              <rect x="10" y="175" width="300" height="12" rx="4" fill="#334155"/>
-              
-              <!-- Teacher Body / Lab Coat -->
-              <path d="M 180 200 L 180 135 C 180 120, 195 115, 215 115 C 235 115, 250 120, 250 135 L 250 200 Z" fill="url(#coatGrad)"/>
-              <!-- Blue Tie / Shirt -->
-              <path d="M 210 115 L 215 140 L 220 115 Z" fill="#6366f1"/>
-              <path d="M 213 140 L 215 165 L 217 140 Z" fill="#ec4899"/>
-              <line x1="215" y1="115" x2="215" y2="200" stroke="#cbd5e1" stroke-width="1.5"/>
-
-              <!-- Pocket with pens -->
-              <rect x="228" y="135" width="14" height="14" rx="2" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-              <line x1="232" y1="130" x2="232" y2="135" stroke="#ef4444" stroke-width="2"/>
-              <line x1="237" y1="128" x2="237" y2="135" stroke="#3b82f6" stroke-width="2"/>
-
-              <!-- Teacher Head & Friendly Face -->
-              <rect x="209" y="98" width="12" height="18" fill="#ffd1b3" rx="4"/>
-              <circle cx="215" cy="85" r="22" fill="#ffd1b3"/>
-
-              <!-- Hair -->
-              <path d="M 193 80 C 193 62, 206 58, 215 58 C 224 58, 237 62, 237 80 C 232 72, 224 66, 215 66 C 206 66, 198 72, 193 80 Z" fill="#334155"/>
-
-              <!-- Spectacles (Round nerdy science glasses) -->
-              <circle cx="206" cy="84" r="8" stroke="#0284c7" stroke-width="2.5" fill="rgba(255,255,255,0.5)"/>
-              <circle cx="224" cy="84" r="8" stroke="#0284c7" stroke-width="2.5" fill="rgba(255,255,255,0.5)"/>
-              <line x1="214" y1="84" x2="216" y2="84" stroke="#0284c7" stroke-width="2"/>
-
-              <!-- Cheerful eyes & eyebrows -->
-              <circle cx="206" cy="84" r="2.5" fill="#0f172a"/>
-              <circle cx="224" cy="84" r="2.5" fill="#0f172a"/>
-              <path d="M 200 73 Q 206 70 212 73" stroke="#475569" stroke-width="2" stroke-linecap="round" fill="none"/>
-              <path d="M 218 73 Q 224 70 230 73" stroke="#475569" stroke-width="2" stroke-linecap="round" fill="none"/>
-
-              <!-- Smiling Mouth -->
-              <path d="M 209 95 Q 215 102 221 95" stroke="#9a3412" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-
-              <!-- Idea Spark above head -->
-              <g transform="translate(215, 42)" class="anim-twinkle">
-                <circle cx="0" cy="0" r="5" fill="#fbbf24"/>
-                <line x1="0" y1="-9" x2="0" y2="-5" stroke="#fbbf24" stroke-width="2"/>
-                <line x1="-7" y1="-7" x2="-4" y2="-4" stroke="#fbbf24" stroke-width="2"/>
-                <line x1="7" y1="-7" x2="4" y2="-4" stroke="#fbbf24" stroke-width="2"/>
-              </g>
-
-              <!-- Left Arm Holding Pointer pointing to Chalkboard -->
-              <g class="anim-pointer">
-                <!-- Arm -->
-                <path d="M 190 130 Q 170 120 160 100" stroke="#ffffff" stroke-width="12" stroke-linecap="round" fill="none"/>
-                <!-- Hand -->
-                <circle cx="158" cy="98" r="6" fill="#ffd1b3"/>
-                <!-- Wooden Pointer Stick pointing to formulas -->
-                <line x1="156" y1="96" x2="110" y2="55" stroke="#d97706" stroke-width="3.5" stroke-linecap="round"/>
-                <!-- Pointer tip -->
-                <circle cx="110" cy="55" r="2.5" fill="#fef08a"/>
-              </g>
-            </g>
-
-            <!-- Bubbling Erlenmeyer Flask on Lab Bench -->
-            <g transform="translate(45, 130)">
-              <!-- Glass Flask Body -->
-              <path d="M 20 0 L 26 0 L 26 15 L 42 45 C 45 50, 40 52, 35 52 L 11 52 C 6 52, 1 50, 4 45 L 20 15 Z" fill="rgba(255,255,255,0.15)" stroke="#38bdf8" stroke-width="2"/>
-              <!-- Liquid inside -->
-              <path d="M 9 46 L 37 46 C 39 49, 36 50, 33 50 L 13 50 C 10 50, 7 49, 9 46 Z" fill="url(#flaskGrad)"/>
-              
-              <!-- Animated Rising Bubbles -->
-              <circle cx="23" cy="40" r="3" fill="#67e8f9" class="anim-bubble-1"/>
-              <circle cx="28" cy="35" r="2" fill="#ec4899" class="anim-bubble-2"/>
-              <circle cx="18" cy="30" r="2.5" fill="#a7f3d0" class="anim-bubble-3"/>
-
-              <!-- Rising Steam -->
-              <path d="M 23 -2 Q 27 -10 21 -18" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" fill="none" class="anim-steam" opacity="0.7"/>
-            </g>
-
-            <!-- Stack of Science Books on Desk -->
-            <g transform="translate(100, 155)">
-              <rect x="0" y="15" width="38" height="7" rx="1.5" fill="#2563eb"/>
-              <rect x="3" y="8" width="34" height="7" rx="1.5" fill="#7c3aed"/>
-              <rect x="6" y="1" width="30" height="7" rx="1.5" fill="#f43f5e"/>
-            </g>
-
-            <!-- Twinkling Sparkles -->
-            <path d="M 285 45 L 287 50 L 292 52 L 287 54 L 285 59 L 283 54 L 278 52 L 283 50 Z" fill="#fbbf24" class="anim-twinkle"/>
-            <path d="M 30 115 L 31 119 L 35 120 L 31 121 L 30 125 L 29 121 L 25 120 L 29 119 Z" fill="#38bdf8" class="anim-twinkle"/>
-          </svg>
         </div>
       </section>
 
       <!-- Dashboard Highlights Cards -->
-      <section class="stats-grid">
+      <section class="stats-grid" id="statsGridSection">
         <!-- Fees Pending Highlight Card (Prominent User Requirement) -->
         <div class="stat-card stat-pending-fees" id="statCardPending">
-          <div class="stat-badge">Critical Priority</div>
-          <div class="stat-content">
+          <div class="stat-card-top">
             <span class="stat-label">Total Fees Pending</span>
-            <div class="stat-number-row">
-              <span class="stat-value pending-val" id="statTotalPending">₹0</span>
-              <span class="stat-unit" id="statPendingCount">0 students</span>
-            </div>
-            <p class="stat-desc">Sum of outstanding balances across all 10 batches</p>
+            <span class="stat-badge danger">Dues</span>
           </div>
+          <div class="stat-number-row">
+            <span class="stat-value pending-val" id="statTotalPending">₹0</span>
+            <span class="stat-unit" id="statPendingCount">0 students</span>
+          </div>
+          <p class="stat-desc">Sum of outstanding balances across all 10 batches</p>
           <div class="stat-card-footer">
             <button class="card-action-link" id="jumpToPendingTabBtn">View Pending List & Remind →</button>
           </div>
         </div>
 
         <!-- Total Enrolled Students -->
-        <div class="stat-card">
-          <div class="stat-icon-wrapper blue">👥</div>
-          <div class="stat-content">
+        <div class="stat-card" id="statCardStudents">
+          <div class="stat-card-top">
             <span class="stat-label">Total Students</span>
-            <div class="stat-number-row">
-              <span class="stat-value" id="statTotalStudents">0</span>
-              <span class="stat-unit">across <span id="statBatchCount">10</span> batches</span>
-            </div>
-            <p class="stat-desc">~200 students per batch capacity</p>
+            <span class="stat-badge info">Active</span>
           </div>
+          <div class="stat-number-row">
+            <span class="stat-value" id="statTotalStudents">0</span>
+            <span class="stat-unit">across <span id="statBatchCount">10</span> batches</span>
+          </div>
+          <p class="stat-desc">~200 students per batch capacity</p>
           <div class="stat-card-footer">
             <button class="card-action-link" id="quickAddStudentBtn">+ Enroll New Student</button>
           </div>
         </div>
 
         <!-- Today's Attendance -->
-        <div class="stat-card">
-          <div class="stat-icon-wrapper green">📋</div>
-          <div class="stat-content">
+        <div class="stat-card" id="statCardAttendance">
+          <div class="stat-card-top">
             <span class="stat-label">Today's Attendance</span>
-            <div class="stat-number-row">
-              <span class="stat-value" id="statAttendancePct">--%</span>
-              <span class="stat-unit" id="statAttendanceDetail">Mark today</span>
-            </div>
-            <p class="stat-desc">Present vs absent record across batches</p>
+            <span class="stat-badge success">Live</span>
           </div>
+          <div class="stat-number-row">
+            <span class="stat-value" id="statAttendancePct">--%</span>
+            <span class="stat-unit" id="statAttendanceDetail">Mark today</span>
+          </div>
+          <p class="stat-desc">Present vs absent record across batches</p>
           <div class="stat-card-footer">
             <button class="card-action-link" id="jumpToAttendanceBtn">Open Attendance Register →</button>
           </div>
         </div>
 
         <!-- Fees Collected Today -->
-        <div class="stat-card">
-          <div class="stat-icon-wrapper purple">💳</div>
-          <div class="stat-content">
+        <div class="stat-card" id="statCardCollected">
+          <div class="stat-card-top">
             <span class="stat-label">Collected Today</span>
-            <div class="stat-number-row">
-              <span class="stat-value" id="statCollectedToday">₹0</span>
-              <span class="stat-unit">collected by staff</span>
-            </div>
-            <p class="stat-desc">Live synced payments recorded today</p>
+            <span class="stat-badge subtle">Today</span>
           </div>
+          <div class="stat-number-row">
+            <span class="stat-value" id="statCollectedToday">₹0</span>
+            <span class="stat-unit">collected by staff</span>
+          </div>
+          <p class="stat-desc">Live synced payments recorded today</p>
           <div class="stat-card-footer">
             <button class="card-action-link" id="openSideLogSummaryBtn">View Payment Audit →</button>
           </div>
         </div>
       </section>
 
-      <!-- Main Home Screen Tabs -->
-      <section class="main-tabs-section">
+      <!-- Home Screen Hint / Quick Jump Card (Stopping right after Collected Today) -->
+      <div class="home-drawer-hint-card" id="homeDrawerHintCard">
+        <div class="hint-content-wrap">
+          <span class="hint-icon">📋</span>
+          <div class="hint-text">
+            <strong>Need Detailed Registers or Batch Management?</strong>
+            <p>Fees Pending, Batches, Student Records, and Attendance are neatly organized inside the <b>☰ (3 Lines Menu)</b> on top-left.</p>
+          </div>
+        </div>
+        <button type="button" class="btn-hint-open-drawer" id="hintOpenDrawerBtn">Open ☰ Menu</button>
+      </div>
+
+      <!-- Detailed Module Views Section (Hidden on Home, Accessed via 3-Lines Menu or Card Jumps) -->
+      <section class="main-tabs-section" id="mainTabsSection" style="display: none;">
+        <!-- Top Back Navigation Header for Active Sub-View -->
+        <div class="active-view-header" id="activeViewHeader">
+          <button type="button" class="btn-back-home" id="btnBackToHome" title="Return to Home Dashboard">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <span>Home Dashboard</span>
+          </button>
+          <div class="active-view-title-wrap">
+            <h2 class="active-view-title" id="activeViewTitle">💰 Fees Pending Register</h2>
+            <p class="active-view-sub" id="activeViewSub">Tap ☰ menu on top-left to jump across coaching modules anytime</p>
+          </div>
+        </div>
+
         <div class="tabs-header">
           <div class="tab-buttons">
             <!-- Tab 1: Fees Pending (Requested by User) -->
