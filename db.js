@@ -19,6 +19,13 @@ function initDb(dbFilePath) {
       name TEXT UNIQUE NOT NULL,
       role TEXT NOT NULL DEFAULT 'Staff Member',
       avatar_color TEXT DEFAULT '#6366f1',
+      is_owner INTEGER DEFAULT 0,
+      pin TEXT,
+      phone TEXT DEFAULT '',
+      can_view_fees INTEGER DEFAULT 1,
+      can_collect_fees INTEGER DEFAULT 1,
+      can_mark_attendance INTEGER DEFAULT 1,
+      can_import_excel INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -91,6 +98,15 @@ function initDb(dbFilePath) {
     CREATE INDEX IF NOT EXISTS idx_fees_student ON fee_transactions(student_id);
     CREATE INDEX IF NOT EXISTS idx_activity_created ON activity_logs(created_at DESC);
   `);
+
+  // Ensure staff table columns exist if upgrading from legacy schema
+  try { db.exec('ALTER TABLE staff ADD COLUMN is_owner INTEGER DEFAULT 0;'); } catch (_) {}
+  try { db.exec('ALTER TABLE staff ADD COLUMN pin TEXT;'); } catch (_) {}
+  try { db.exec("ALTER TABLE staff ADD COLUMN phone TEXT DEFAULT '';"); } catch (_) {}
+  try { db.exec('ALTER TABLE staff ADD COLUMN can_view_fees INTEGER DEFAULT 1;'); } catch (_) {}
+  try { db.exec('ALTER TABLE staff ADD COLUMN can_collect_fees INTEGER DEFAULT 1;'); } catch (_) {}
+  try { db.exec('ALTER TABLE staff ADD COLUMN can_mark_attendance INTEGER DEFAULT 1;'); } catch (_) {}
+  try { db.exec('ALTER TABLE staff ADD COLUMN can_import_excel INTEGER DEFAULT 1;'); } catch (_) {}
 
   // Seed default director staff if empty
   const staffCount = db.prepare('SELECT COUNT(*) as count FROM staff').get().count;
