@@ -12,6 +12,31 @@ function initDb(dbFilePath) {
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec('PRAGMA journal_mode = WAL;');
 
+  // Automatic Migration: Drop & rebuild tables if students table has legacy schema (e.g. global roll_no UNIQUE) or legacy demo batches
+  try {
+    let shouldRebuildTables = false;
+    const studentsTableSql = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='students'").get()?.sql || '';
+    if (studentsTableSql && (studentsTableSql.includes('roll_no TEXT UNIQUE') || !studentsTableSql.includes('UNIQUE(batch_id, roll_no)'))) {
+      shouldRebuildTables = true;
+    }
+    try {
+      const hasLegacyBatches = db.prepare("SELECT id FROM batches WHERE name LIKE '%JEE%' OR name LIKE '%NEET%' LIMIT 1").get();
+      if (hasLegacyBatches) {
+        shouldRebuildTables = true;
+      }
+    } catch (_) {}
+
+    if (shouldRebuildTables) {
+      db.exec(`
+        DROP TABLE IF EXISTS attendance;
+        DROP TABLE IF EXISTS fee_transactions;
+        DROP TABLE IF EXISTS activity_logs;
+        DROP TABLE IF EXISTS students;
+        DROP TABLE IF EXISTS batches;
+      `);
+    }
+  } catch (_) {}
+
   // Schema creation
   db.exec(`
     CREATE TABLE IF NOT EXISTS staff (
@@ -100,6 +125,8 @@ function initDb(dbFilePath) {
   `);
 
   // Ensure staff table columns exist if upgrading from legacy schema
+  try { db.exec("ALTER TABLE staff ADD COLUMN role TEXT NOT NULL DEFAULT 'Staff Member';"); } catch (_) {}
+  try { db.exec("ALTER TABLE staff ADD COLUMN avatar_color TEXT DEFAULT '#6366f1';"); } catch (_) {}
   try { db.exec('ALTER TABLE staff ADD COLUMN is_owner INTEGER DEFAULT 0;'); } catch (_) {}
   try { db.exec('ALTER TABLE staff ADD COLUMN pin TEXT;'); } catch (_) {}
   try { db.exec("ALTER TABLE staff ADD COLUMN phone TEXT DEFAULT '';"); } catch (_) {}
@@ -307,7 +334,7 @@ function initDb(dbFilePath) {
     ];
 
     const insertS = db.prepare(`
-      INSERT INTO students (roll_no, name, batch_id, total_fee, fees_paid, parent_phone, notes)
+      INSERT OR REPLACE INTO students (roll_no, name, batch_id, total_fee, fees_paid, parent_phone, notes)
       VALUES (?, ?, ?, ?, ?, '', 'Official Coaching Roster')
     `);
     const insertFee = db.prepare(`
@@ -318,9 +345,13 @@ function initDb(dbFilePath) {
     for (const s of officialRoster) {
       const bId = bMap[s.b];
       if (!bId) continue;
-      const res = insertS.run(s.r, s.n, bId, s.t, s.p);
-      if (s.p > 0) {
-        insertFee.run(res.lastInsertRowid, s.p, res.lastInsertRowid);
+      try {
+        const res = insertS.run(s.r, s.n, bId, s.t, s.p);
+        if (s.p > 0 && res.lastInsertRowid) {
+          insertFee.run(res.lastInsertRowid, s.p, res.lastInsertRowid);
+        }
+      } catch (err) {
+        console.warn(`Warning inserting student ${s.n} in ${s.b}:`, err.message);
       }
     }
 
