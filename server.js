@@ -396,7 +396,14 @@ const server = http.createServer(async (req, res) => {
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
       const ext = path.extname(filePath).toLowerCase();
       const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-      res.writeHead(200, { 'Content-Type': contentType });
+      const isDynamicAsset = ext === '.html' || ext === '.js' || ext === '.css' || ext === '.json';
+      const headers = { 'Content-Type': contentType };
+      if (isDynamicAsset) {
+        headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+        headers['Pragma'] = 'no-cache';
+        headers['Expires'] = '0';
+      }
+      res.writeHead(200, headers);
       fs.createReadStream(filePath).pipe(res);
       return;
     }
@@ -404,7 +411,12 @@ const server = http.createServer(async (req, res) => {
     // Fallback to index.html for SPA
     const indexPath = path.join(PUBLIC_DIR, 'index.html');
     if (fs.existsSync(indexPath)) {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
       fs.createReadStream(indexPath).pipe(res);
       return;
     }
