@@ -289,7 +289,15 @@ function updateGreeting() {
     .slice(0, 2)
     .join('')
     .toUpperCase();
-  elements.currentStaffAvatar.textContent = initials || 'ST';
+  if (state.currentStaffPhoto) {
+    elements.currentStaffAvatar.innerHTML = `<img src="${state.currentStaffPhoto}" alt="Avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+    elements.currentStaffAvatar.style.backgroundColor = 'transparent';
+  } else {
+    elements.currentStaffAvatar.textContent = initials || 'ST';
+    if (state.currentStaffColor) {
+      elements.currentStaffAvatar.style.backgroundColor = state.currentStaffColor;
+    }
+  }
 
   updateStudentBatchSubtitle();
 }
@@ -355,58 +363,119 @@ async function openStaffModal() {
   }
 }
 
-async function openUserProfileModal() {
-  try {
-    const res = await apiFetch('/api/staff/current');
-    const staff = res.staff || { name: state.currentStaff, role: state.currentRole || 'Staff Member' };
+let originalProfileData = {};
+let profileAvatarPhotoData = null;
 
-    const idInput = document.getElementById('profileStaffId');
-    if (idInput) idInput.value = staff.id || '';
-
-    const nameInput = document.getElementById('profileInputName');
-    if (nameInput) nameInput.value = staff.name || state.currentStaff;
-
-    const roleInput = document.getElementById('profileInputRole');
-    if (roleInput) roleInput.value = staff.role || '';
-
-    const phoneInput = document.getElementById('profileInputPhone');
-    if (phoneInput) phoneInput.value = staff.phone || '';
-
-    const emailInput = document.getElementById('profileInputEmail');
-    if (emailInput) emailInput.value = staff.email || '';
-
-    const addressInput = document.getElementById('profileInputAddress');
-    if (addressInput) addressInput.value = staff.address || '';
-
-    const pinInput = document.getElementById('profileInputPin');
-    if (pinInput) pinInput.value = staff.pin || '';
-
-    const initials = (staff.name || state.currentStaff)
+function renderProfileAvatarDisplay(name, color, photoData) {
+  const avatarEl = document.getElementById('profileAvatarPreview');
+  if (!avatarEl) return;
+  if (photoData) {
+    avatarEl.innerHTML = `<img src="${photoData}" alt="Profile Photo" class="profile-avatar-img-view">`;
+    avatarEl.style.backgroundColor = 'transparent';
+  } else {
+    const initials = (name || 'Staff')
       .split(' ')
       .map(p => p[0])
       .filter(Boolean)
       .slice(0, 2)
       .join('')
       .toUpperCase();
+    avatarEl.innerHTML = `<span id="profileAvatarInitials">${initials || 'ST'}</span>`;
+    avatarEl.style.backgroundColor = color || '#0071E3';
+  }
+}
 
-    const avatarEl = document.getElementById('profileAvatarPreview');
-    if (avatarEl) {
-      avatarEl.textContent = initials || 'ST';
-      avatarEl.style.backgroundColor = staff.avatar_color || '#0071E3';
+function checkProfileChanges() {
+  const name = document.getElementById('profileInputName')?.value.trim() || '';
+  const role = document.getElementById('profileInputRole')?.value.trim() || '';
+  const phone = document.getElementById('profileInputPhone')?.value.trim() || '';
+  const email = document.getElementById('profileInputEmail')?.value.trim() || '';
+  const address = document.getElementById('profileInputAddress')?.value.trim() || '';
+  const pin = document.getElementById('profileInputPin')?.value.trim() || '';
+  const color = document.getElementById('profileColorPicker')?.value || '#0071E3';
+  const photo = profileAvatarPhotoData;
+
+  const hasChanged = (
+    name !== (originalProfileData.name || '') ||
+    role !== (originalProfileData.role || '') ||
+    phone !== (originalProfileData.phone || '') ||
+    email !== (originalProfileData.email || '') ||
+    address !== (originalProfileData.address || '') ||
+    pin !== (originalProfileData.pin || '') ||
+    color.toLowerCase() !== (originalProfileData.avatar_color || '#0071E3').toLowerCase() ||
+    photo !== (originalProfileData.avatar_image || null)
+  );
+
+  const unsavedBar = document.getElementById('profileUnsavedBar');
+  if (unsavedBar) {
+    if (hasChanged) {
+      unsavedBar.classList.add('show');
+    } else {
+      unsavedBar.classList.remove('show');
     }
+  }
+}
+
+async function openUserProfileModal() {
+  try {
+    const res = await apiFetch('/api/staff/current');
+    const staff = res.staff || { name: state.currentStaff, role: state.currentRole || 'Staff Member' };
+
+    originalProfileData = {
+      name: staff.name || state.currentStaff,
+      role: staff.role || '',
+      phone: staff.phone || '',
+      email: staff.email || '',
+      address: staff.address || '',
+      pin: staff.pin || '',
+      avatar_color: staff.avatar_color || '#0071E3',
+      avatar_image: staff.avatar_image || null
+    };
+
+    profileAvatarPhotoData = staff.avatar_image || null;
+
+    const idInput = document.getElementById('profileStaffId');
+    if (idInput) idInput.value = staff.id || '';
+
+    const nameInput = document.getElementById('profileInputName');
+    if (nameInput) nameInput.value = originalProfileData.name;
+
+    const roleInput = document.getElementById('profileInputRole');
+    if (roleInput) roleInput.value = originalProfileData.role;
+
+    const phoneInput = document.getElementById('profileInputPhone');
+    if (phoneInput) phoneInput.value = originalProfileData.phone;
+
+    const emailInput = document.getElementById('profileInputEmail');
+    if (emailInput) emailInput.value = originalProfileData.email;
+
+    const addressInput = document.getElementById('profileInputAddress');
+    if (addressInput) addressInput.value = originalProfileData.address;
+
+    const pinInput = document.getElementById('profileInputPin');
+    if (pinInput) pinInput.value = originalProfileData.pin;
 
     const colorPicker = document.getElementById('profileColorPicker');
-    if (colorPicker) {
-      colorPicker.value = staff.avatar_color || '#0071E3';
-    }
+    if (colorPicker) colorPicker.value = originalProfileData.avatar_color;
+
+    // Render avatar preview
+    renderProfileAvatarDisplay(originalProfileData.name, originalProfileData.avatar_color, profileAvatarPhotoData);
 
     const heroName = document.getElementById('profileHeroName');
-    if (heroName) heroName.textContent = staff.name || state.currentStaff;
+    if (heroName) heroName.textContent = originalProfileData.name;
 
     const heroRole = document.getElementById('profileHeroRole');
-    if (heroRole) heroRole.textContent = staff.role || (staff.is_owner ? 'Institute Director (Owner)' : 'Staff Member');
+    if (heroRole) heroRole.textContent = originalProfileData.role || (staff.is_owner ? 'Institute Director (Owner)' : 'Staff Member');
 
+    const badgeName = document.getElementById('profileCurrentStaffNameBadge');
+    if (badgeName) badgeName.textContent = originalProfileData.name;
+
+    // Initially hide unsaved bar until user edits something
+    document.getElementById('profileUnsavedBar')?.classList.remove('show');
+
+    // Open fullscreen modal and hide bottom navigation dock
     openModal('profileModal');
+    document.body.classList.add('profile-fullscreen-open');
   } catch (err) {
     showToast('Failed to open profile: ' + err.message, 'danger');
   }
@@ -764,14 +833,26 @@ function renderBatchesGrid() {
 
   container.innerHTML = state.batches
     .map(b => {
+      const pendingVal = Number(b.total_pending || 0);
+      const isPending = pendingVal > 0;
       return `
-        <div class="batch-card">
-          <div>
-            <div class="batch-card-top">
-              <div class="batch-card-top-left">
-                <span class="batch-card-code">${escapeHtml(b.code || 'BATCH')}</span>
-                <span class="badge-counter">${b.student_count || 0} Students</span>
-              </div>
+        <div class="batch-card neo-depth">
+          <div class="batch-card-info-row">
+            <div class="batch-info-name" title="${escapeHtml(b.name)}">
+              <span class="batch-name-indicator"></span>
+              <span class="batch-name-text">${escapeHtml(b.name)}</span>
+            </div>
+            <div class="batch-info-badges">
+              <span class="batch-stat-badge students">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px;">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                </svg>
+                ${b.student_count || 0} Students
+              </span>
+              <span class="batch-stat-badge dues ${isPending ? 'has-dues' : 'clear'}">
+                <span class="dues-label">Pending:</span> ${formatCurrency(pendingVal)}
+              </span>
               <div class="card-dots-menu-wrap">
                 <button type="button" class="btn-dots-menu" onclick="toggleBatchMenu(event, ${b.id})" title="Batch Options">⋮</button>
                 <div class="dots-dropdown-menu" id="batchMenu-${b.id}">
@@ -781,25 +862,28 @@ function renderBatchesGrid() {
                 </div>
               </div>
             </div>
-            <h4 class="batch-card-title">${escapeHtml(b.name)}</h4>
-            <p class="batch-card-schedule">🕒 ${escapeHtml(b.schedule || 'Schedule TBA')}</p>
-          </div>
-
-          <div class="batch-metrics-row">
-            <div class="batch-metric">
-              <span class="bm-label">Collected</span>
-              <span class="bm-val text-green">${formatCurrency(b.total_paid || 0)}</span>
-            </div>
-            <div class="batch-metric">
-              <span class="bm-label">Pending Dues</span>
-              <span class="bm-val pending">${formatCurrency(b.total_pending || 0)}</span>
-            </div>
           </div>
 
           <div class="batch-card-actions">
-            <button class="btn btn-sm btn-outline" onclick="filterByBatch(${b.id})">View Students</button>
-            <button class="btn btn-sm btn-outline" onclick="openAttendanceForBatch(${b.id})">Attendance</button>
-            <button class="btn btn-sm btn-primary" onclick="openUploadForBatch(${b.id})">📥 Upload Excel</button>
+            <button class="btn btn-sm btn-outline-neo btn-batch-view" onclick="filterByBatch(${b.id})">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              View Students
+            </button>
+            <button class="btn btn-sm btn-primary-neo btn-batch-att" onclick="openAttendanceForBatch(${b.id})">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+                <path d="m9 16 2 2 4-4"></path>
+              </svg>
+              Attendance
+            </button>
           </div>
         </div>
       `;
@@ -1942,15 +2026,99 @@ document.querySelectorAll('.bottom-nav-item').forEach(btn => {
   });
 });
 
-// Profile Modal Form Handlers
-document.getElementById('profileColorPicker')?.addEventListener('input', (e) => {
-  const avatarEl = document.getElementById('profileAvatarPreview');
-  if (avatarEl) avatarEl.style.backgroundColor = e.target.value;
+// Profile Modal Form Handlers & Unsaved Detection
+['profileInputName', 'profileInputRole', 'profileInputPhone', 'profileInputEmail', 'profileInputAddress', 'profileInputPin'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', checkProfileChanges);
 });
 
-document.getElementById('btnProfileSwitchStaff')?.addEventListener('click', () => {
+document.getElementById('profileColorPicker')?.addEventListener('input', (e) => {
+  const avatarEl = document.getElementById('profileAvatarPreview');
+  if (avatarEl && !profileAvatarPhotoData) {
+    avatarEl.style.backgroundColor = e.target.value;
+  }
+  checkProfileChanges();
+});
+
+// Gallery Photo Picker Handler
+document.getElementById('profilePhotoInput')?.addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    showToast('Please select a valid image file', 'warning');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX_SIZE = 360;
+      let w = img.width;
+      let h = img.height;
+      if (w > h) {
+        if (w > MAX_SIZE) {
+          h = Math.round((h * MAX_SIZE) / w);
+          w = MAX_SIZE;
+        }
+      } else {
+        if (h > MAX_SIZE) {
+          w = Math.round((w * MAX_SIZE) / h);
+          h = MAX_SIZE;
+        }
+      }
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.85);
+
+      profileAvatarPhotoData = compressed;
+      renderProfileAvatarDisplay(
+        document.getElementById('profileInputName')?.value,
+        document.getElementById('profileColorPicker')?.value,
+        compressed
+      );
+      checkProfileChanges();
+    };
+    img.src = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+// Cancel button reverts changes
+document.getElementById('btnProfileCancel')?.addEventListener('click', () => {
+  document.getElementById('profileInputName').value = originalProfileData.name || '';
+  document.getElementById('profileInputRole').value = originalProfileData.role || '';
+  document.getElementById('profileInputPhone').value = originalProfileData.phone || '';
+  document.getElementById('profileInputEmail').value = originalProfileData.email || '';
+  document.getElementById('profileInputAddress').value = originalProfileData.address || '';
+  document.getElementById('profileInputPin').value = originalProfileData.pin || '';
+  document.getElementById('profileColorPicker').value = originalProfileData.avatar_color || '#0071E3';
+  profileAvatarPhotoData = originalProfileData.avatar_image || null;
+
+  renderProfileAvatarDisplay(originalProfileData.name, originalProfileData.avatar_color, profileAvatarPhotoData);
+  document.getElementById('profileUnsavedBar')?.classList.remove('show');
+});
+
+// Save button triggers form submit
+document.getElementById('btnProfileSave')?.addEventListener('click', () => {
+  document.getElementById('profileForm')?.requestSubmit();
+});
+
+// Switch Staff Buttons
+['btnProfileSwitchStaffTop', 'btnProfileSwitchStaff'].forEach(id => {
+  document.getElementById(id)?.addEventListener('click', () => {
+    closeModal('profileModal');
+    document.body.classList.remove('profile-fullscreen-open');
+    openStaffModal();
+  });
+});
+
+// Close Profile Back Button
+document.getElementById('closeProfileBtn')?.addEventListener('click', () => {
   closeModal('profileModal');
-  openStaffModal();
+  document.body.classList.remove('profile-fullscreen-open');
 });
 
 document.getElementById('profileForm')?.addEventListener('submit', async (e) => {
@@ -1963,6 +2131,7 @@ document.getElementById('profileForm')?.addEventListener('submit', async (e) => 
   const address = document.getElementById('profileInputAddress').value.trim();
   const pin = document.getElementById('profileInputPin').value.trim();
   const avatar_color = document.getElementById('profileColorPicker').value;
+  const avatar_image = profileAvatarPhotoData;
 
   if (!name) {
     showToast('Staff name is required', 'warning');
@@ -1970,7 +2139,7 @@ document.getElementById('profileForm')?.addEventListener('submit', async (e) => 
   }
 
   try {
-    const payload = { id: staffId, name, role, phone, email, address, pin, avatar_color };
+    const payload = { id: staffId, name, role, phone, email, address, pin, avatar_color, avatar_image };
     const res = await apiFetch('/api/staff/profile', {
       method: 'PUT',
       body: JSON.stringify(payload)
@@ -1979,14 +2148,27 @@ document.getElementById('profileForm')?.addEventListener('submit', async (e) => 
     if (res.staff) {
       state.currentStaff = res.staff.name;
       state.currentRole = res.staff.role;
+      state.currentStaffPhoto = res.staff.avatar_image || null;
+      state.currentStaffColor = res.staff.avatar_color || '#0071E3';
       localStorage.setItem('ygt_staff', res.staff.name);
       localStorage.setItem('ygt_role', res.staff.role);
       updateGreeting();
-      if (elements.currentStaffAvatar) {
-        elements.currentStaffAvatar.style.backgroundColor = res.staff.avatar_color || '#0071E3';
-      }
+      
+      originalProfileData = {
+        name: res.staff.name,
+        role: res.staff.role,
+        phone: res.staff.phone || '',
+        email: res.staff.email || '',
+        address: res.staff.address || '',
+        pin: res.staff.pin || '',
+        avatar_color: res.staff.avatar_color || '#0071E3',
+        avatar_image: res.staff.avatar_image || null
+      };
+      profileAvatarPhotoData = res.staff.avatar_image || null;
+      document.getElementById('profileUnsavedBar')?.classList.remove('show');
     }
     closeModal('profileModal');
+    document.body.classList.remove('profile-fullscreen-open');
     showToast('Profile details saved successfully! 👤✨', 'success');
   } catch (err) {
     showToast('Failed to save profile: ' + err.message, 'danger');
@@ -2145,6 +2327,9 @@ function closeModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
     modal.classList.remove('open');
+    if (modalId === 'profileModal') {
+      document.body.classList.remove('profile-fullscreen-open');
+    }
     if (window.history.state && window.history.state.modal === modalId) {
       isClosingModalProgrammatically = true;
       try { window.history.back(); } catch (_) {}
@@ -2351,6 +2536,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   elements.attendanceDatePicker.value = state.currentAttendanceDate;
   updateGreeting();
   setInterval(updateGreeting, 60000);
+
+  // Load current staff profile & photo
+  apiFetch('/api/staff/current').then(res => {
+    if (res && res.staff) {
+      state.currentStaff = res.staff.name;
+      state.currentRole = res.staff.role;
+      state.currentStaffPhoto = res.staff.avatar_image || null;
+      state.currentStaffColor = res.staff.avatar_color || '#0071E3';
+      updateGreeting();
+    }
+  }).catch(() => {});
 
   const startTime = Date.now();
   try {

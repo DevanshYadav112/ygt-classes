@@ -1248,71 +1248,181 @@
     </div>
   </div>
 
-  <!-- PROFILE DETAILS & SETTINGS MODAL (Top Right Avatar Modal) -->
-  <div id="profileModal" class="modal-backdrop">
-    <div class="modal-card profile-modal-card">
-      <div class="modal-header">
-        <div class="modal-title-wrap">
-          <h2>👤 Staff Profile & Settings</h2>
-          <p class="modal-subtitle">View and update your profile information and credentials</p>
-        </div>
-        <button class="close-modal-btn" data-close-modal="profileModal">✕</button>
+  <!-- FULL SCREEN STAFF PROFILE & SETTINGS PAGE (Neomorphic Depth UI) -->
+  <div id="profileModal" class="profile-fullscreen-view" role="dialog" aria-modal="true">
+    <!-- Profile Top Bar Header -->
+    <header class="profile-fullscreen-header">
+      <button type="button" class="profile-back-btn" id="closeProfileBtn" data-close-modal="profileModal" aria-label="Go Back">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      <div class="profile-header-center">
+        <h2>Staff Profile & Settings</h2>
+        <span class="profile-header-sub">Manage account, contact & institute details</span>
       </div>
+      <button type="button" class="profile-switch-btn" id="btnProfileSwitchStaffTop" title="Switch Staff Account">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="8.5" cy="7" r="4"></circle>
+          <polyline points="17 11 19 13 23 9"></polyline>
+        </svg>
+      </button>
+    </header>
 
-      <form id="profileForm" class="modal-form">
+    <div class="profile-fullscreen-scrollable">
+      <form id="profileForm" class="profile-full-form">
         <input type="hidden" id="profileStaffId">
-        
-        <div class="profile-hero-section">
-          <div class="profile-avatar-wrap">
-            <div class="profile-avatar-circle" id="profileAvatarPreview">RY</div>
-            <label class="avatar-edit-badge" title="Pick avatar accent color" for="profileColorPicker">
+        <input type="file" id="profilePhotoInput" accept="image/*" style="display:none;">
+
+        <!-- HERO SECTION: Avatar with Dual Shadow Depth + Camera Upload -->
+        <div class="profile-hero-card">
+          <div class="profile-avatar-super-wrap">
+            <div class="profile-avatar-circle-large" id="profileAvatarPreview">
+              <span id="profileAvatarInitials">RY</span>
+            </div>
+            <!-- Camera Upload from Gallery Badge -->
+            <label class="avatar-camera-btn" for="profilePhotoInput" title="Upload Photo from Phone Gallery">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+            </label>
+            <!-- Accent Color Picker Badge -->
+            <label class="avatar-palette-btn" for="profileColorPicker" title="Change Avatar Theme Color">
               <input type="color" id="profileColorPicker" value="#0071E3">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20h9"></path>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+              </svg>
             </label>
           </div>
-          <div class="profile-hero-info">
+
+          <div class="profile-hero-meta">
             <h3 id="profileHeroName">Mr. Roshan Yadav</h3>
-            <span class="profile-badge-owner" id="profileHeroRole">Institute Director (Owner)</span>
+            <div class="profile-role-pill" id="profileHeroRole">Institute Director (Owner)</div>
+            <p class="profile-subtext">Tap camera icon to set photo from device gallery</p>
           </div>
         </div>
 
-        <div class="form-grid">
-          <div class="form-group full">
-            <label for="profileInputName">Full Name *</label>
-            <input type="text" id="profileInputName" required placeholder="Enter full name">
+        <!-- SECTION 1: Personal & Contact Details Card -->
+        <div class="profile-section-card">
+          <div class="section-card-title">
+            <span class="section-card-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </span>
+            <h4>Personal & Contact Details</h4>
           </div>
 
-          <div class="form-group">
-            <label for="profileInputRole">Designation / Role</label>
-            <input type="text" id="profileInputRole" placeholder="e.g. Director / Senior Faculty">
-          </div>
+          <div class="profile-inputs-grid">
+            <div class="neo-input-group">
+              <label for="profileInputName">Full Name <span class="text-danger">*</span></label>
+              <div class="neo-input-wrap">
+                <span class="neo-input-icon">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </span>
+                <input type="text" id="profileInputName" required placeholder="Enter full name">
+              </div>
+            </div>
 
-          <div class="form-group">
-            <label for="profileInputPhone">Phone Number</label>
-            <input type="tel" id="profileInputPhone" placeholder="+91 98765 00000">
-          </div>
+            <div class="neo-input-group">
+              <label for="profileInputRole">Designation / Role</label>
+              <div class="neo-input-wrap">
+                <span class="neo-input-icon">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                </span>
+                <input type="text" id="profileInputRole" placeholder="e.g. Director / Faculty">
+              </div>
+            </div>
 
-          <div class="form-group full">
-            <label for="profileInputEmail">Email Address</label>
-            <input type="email" id="profileInputEmail" placeholder="director@ygtclasses.com">
-          </div>
+            <div class="neo-input-group">
+              <label for="profileInputPhone">Phone Number</label>
+              <div class="neo-input-wrap">
+                <span class="neo-input-icon">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                </span>
+                <input type="tel" id="profileInputPhone" placeholder="+91 98765 00000">
+              </div>
+            </div>
 
-          <div class="form-group full">
-            <label for="profileInputAddress">Coaching Institute / Address</label>
-            <textarea id="profileInputAddress" rows="2" placeholder="Institute branch or address details"></textarea>
-          </div>
-
-          <div class="form-group full">
-            <label for="profileInputPin">Security PIN (4-Digits)</label>
-            <input type="password" id="profileInputPin" maxlength="6" placeholder="Enter PIN (e.g. 1234)">
+            <div class="neo-input-group">
+              <label for="profileInputEmail">Email Address</label>
+              <div class="neo-input-wrap">
+                <span class="neo-input-icon">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                </span>
+                <input type="email" id="profileInputEmail" placeholder="director@ygtclasses.com">
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="profile-modal-actions">
-          <button type="button" class="btn btn-outline" id="btnProfileSwitchStaff">🔄 Switch Staff Member</button>
-          <button type="submit" class="btn btn-primary" id="btnSaveProfile">💾 Save Profile Details</button>
+        <!-- SECTION 2: Institute & Security Card -->
+        <div class="profile-section-card">
+          <div class="section-card-title">
+            <span class="section-card-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+            </span>
+            <h4>Coaching Institute & Security</h4>
+          </div>
+
+          <div class="profile-inputs-grid">
+            <div class="neo-input-group full">
+              <label for="profileInputAddress">Coaching Institute / Address</label>
+              <div class="neo-input-wrap textarea-wrap">
+                <textarea id="profileInputAddress" rows="2" placeholder="e.g. YGT Classes, Main Branch Road"></textarea>
+              </div>
+            </div>
+
+            <div class="neo-input-group full">
+              <label for="profileInputPin">Staff Security PIN (4-Digits)</label>
+              <div class="neo-input-wrap">
+                <span class="neo-input-icon">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </span>
+                <input type="password" id="profileInputPin" maxlength="6" placeholder="Enter PIN (e.g. 1234)">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 3: Account Switching Card -->
+        <div class="profile-section-card switch-account-card">
+          <div class="switch-account-left">
+            <span class="switch-account-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </span>
+            <div>
+              <h4 class="switch-card-title">Switch Active Staff</h4>
+              <p class="switch-card-desc">Logged in as <strong id="profileCurrentStaffNameBadge">Mr. Roshan Yadav</strong></p>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-neo" id="btnProfileSwitchStaff">
+            Switch Staff
+          </button>
         </div>
       </form>
+    </div>
+
+    <!-- FLOATING BOTTOM ACTION BAR (Save & Cancel: Only shows when changes are made) -->
+    <div id="profileUnsavedBar" class="profile-unsaved-action-bar">
+      <button type="button" class="btn btn-profile-cancel" id="btnProfileCancel">
+        ✕ Cancel
+      </button>
+      <button type="button" class="btn btn-profile-save" id="btnProfileSave">
+        ✓ Save Changes
+      </button>
     </div>
   </div>
 
@@ -1331,8 +1441,10 @@
     <button type="button" class="bottom-nav-item" data-bnav="pending-fees" id="bnavFees">
       <div class="bnav-icon-wrap">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="1" x2="12" y2="23"></line>
-          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          <path d="M6 3h12"></path>
+          <path d="M6 8h12"></path>
+          <path d="M6 13h3a4.5 4.5 0 0 0 0-9H6"></path>
+          <path d="M6 13l8.5 8"></path>
         </svg>
       </div>
       <span class="bnav-label">Fees</span>
