@@ -130,6 +130,9 @@ function initDb(dbFilePath) {
   try { db.exec('ALTER TABLE staff ADD COLUMN is_owner INTEGER DEFAULT 0;'); } catch (_) {}
   try { db.exec('ALTER TABLE staff ADD COLUMN pin TEXT;'); } catch (_) {}
   try { db.exec("ALTER TABLE staff ADD COLUMN phone TEXT DEFAULT '';"); } catch (_) {}
+  try { db.exec("ALTER TABLE staff ADD COLUMN email TEXT DEFAULT '';"); } catch (_) {}
+  try { db.exec("ALTER TABLE staff ADD COLUMN address TEXT DEFAULT '';"); } catch (_) {}
+  try { db.exec("ALTER TABLE staff ADD COLUMN avatar_image TEXT DEFAULT '';"); } catch (_) {}
   try { db.exec('ALTER TABLE staff ADD COLUMN can_view_fees INTEGER DEFAULT 1;'); } catch (_) {}
   try { db.exec('ALTER TABLE staff ADD COLUMN can_collect_fees INTEGER DEFAULT 1;'); } catch (_) {}
   try { db.exec('ALTER TABLE staff ADD COLUMN can_mark_attendance INTEGER DEFAULT 1;'); } catch (_) {}
@@ -786,6 +789,42 @@ function initDb(dbFilePath) {
 
     getStaffList() {
       return db.prepare('SELECT * FROM staff ORDER BY id ASC').all();
+    },
+
+    getStaffByName(name) {
+      return db.prepare('SELECT * FROM staff WHERE name = ?').get(name);
+    },
+
+    getStaffById(id) {
+      return db.prepare('SELECT * FROM staff WHERE id = ?').get(Number(id));
+    },
+
+    updateStaffProfile(id, data) {
+      const staff = db.prepare('SELECT * FROM staff WHERE id = ?').get(Number(id));
+      if (!staff) return null;
+      db.prepare(`
+        UPDATE staff
+        SET name = COALESCE(?, name),
+            role = COALESCE(?, role),
+            phone = COALESCE(?, phone),
+            email = COALESCE(?, email),
+            address = COALESCE(?, address),
+            avatar_color = COALESCE(?, avatar_color),
+            avatar_image = COALESCE(?, avatar_image),
+            pin = COALESCE(?, pin)
+        WHERE id = ?
+      `).run(
+        data.name || staff.name,
+        data.role || staff.role,
+        data.phone !== undefined ? data.phone : staff.phone,
+        data.email !== undefined ? data.email : staff.email,
+        data.address !== undefined ? data.address : staff.address,
+        data.avatar_color || staff.avatar_color,
+        data.avatar_image !== undefined ? data.avatar_image : staff.avatar_image,
+        data.pin !== undefined ? data.pin : staff.pin,
+        Number(id)
+      );
+      return db.prepare('SELECT * FROM staff WHERE id = ?').get(Number(id));
     },
 
     addStaff(name, role = 'Staff Member') {

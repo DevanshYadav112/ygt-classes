@@ -355,6 +355,63 @@ async function openStaffModal() {
   }
 }
 
+async function openUserProfileModal() {
+  try {
+    const res = await apiFetch('/api/staff/current');
+    const staff = res.staff || { name: state.currentStaff, role: state.currentRole || 'Staff Member' };
+
+    const idInput = document.getElementById('profileStaffId');
+    if (idInput) idInput.value = staff.id || '';
+
+    const nameInput = document.getElementById('profileInputName');
+    if (nameInput) nameInput.value = staff.name || state.currentStaff;
+
+    const roleInput = document.getElementById('profileInputRole');
+    if (roleInput) roleInput.value = staff.role || '';
+
+    const phoneInput = document.getElementById('profileInputPhone');
+    if (phoneInput) phoneInput.value = staff.phone || '';
+
+    const emailInput = document.getElementById('profileInputEmail');
+    if (emailInput) emailInput.value = staff.email || '';
+
+    const addressInput = document.getElementById('profileInputAddress');
+    if (addressInput) addressInput.value = staff.address || '';
+
+    const pinInput = document.getElementById('profileInputPin');
+    if (pinInput) pinInput.value = staff.pin || '';
+
+    const initials = (staff.name || state.currentStaff)
+      .split(' ')
+      .map(p => p[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+
+    const avatarEl = document.getElementById('profileAvatarPreview');
+    if (avatarEl) {
+      avatarEl.textContent = initials || 'ST';
+      avatarEl.style.backgroundColor = staff.avatar_color || '#0071E3';
+    }
+
+    const colorPicker = document.getElementById('profileColorPicker');
+    if (colorPicker) {
+      colorPicker.value = staff.avatar_color || '#0071E3';
+    }
+
+    const heroName = document.getElementById('profileHeroName');
+    if (heroName) heroName.textContent = staff.name || state.currentStaff;
+
+    const heroRole = document.getElementById('profileHeroRole');
+    if (heroRole) heroRole.textContent = staff.role || (staff.is_owner ? 'Institute Director (Owner)' : 'Staff Member');
+
+    openModal('profileModal');
+  } catch (err) {
+    showToast('Failed to open profile: ' + err.message, 'danger');
+  }
+}
+
 function toggleStaffMenu(event, id) {
   event.stopPropagation();
   const menu = document.getElementById(`staffMenu-${id}`);
@@ -1664,6 +1721,11 @@ function switchView(viewName, pushHistory = true) {
     link.classList.toggle('active', link.getAttribute('data-view') === viewName);
   });
 
+  // Update floating bottom navigation dock active state
+  document.querySelectorAll('.bottom-nav-item').forEach(item => {
+    item.classList.toggle('active', item.getAttribute('data-bnav') === viewName);
+  });
+
   if (isDashboard) {
     updateSaveButtonVisibility();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1868,7 +1930,68 @@ document.getElementById('quickAddStudentBtn').addEventListener('click', () => op
 document.getElementById('btnDirectoryAddStudent').addEventListener('click', () => openNewStudentModal());
 document.getElementById('btnCreateNewBatch').addEventListener('click', () => openModal('batchModal'));
 document.getElementById('openSideLogSummaryBtn')?.addEventListener('click', () => switchView('activity-log'));
-elements.staffProfileBtn.addEventListener('click', () => openStaffModal());
+
+// Top Right Profile Avatar click -> Opens Profile & Settings Modal
+elements.staffProfileBtn.addEventListener('click', () => openUserProfileModal());
+
+// Floating Bottom Navigation Dock Click Handlers
+document.querySelectorAll('.bottom-nav-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.getAttribute('data-bnav');
+    if (target) switchView(target);
+  });
+});
+
+// Profile Modal Form Handlers
+document.getElementById('profileColorPicker')?.addEventListener('input', (e) => {
+  const avatarEl = document.getElementById('profileAvatarPreview');
+  if (avatarEl) avatarEl.style.backgroundColor = e.target.value;
+});
+
+document.getElementById('btnProfileSwitchStaff')?.addEventListener('click', () => {
+  closeModal('profileModal');
+  openStaffModal();
+});
+
+document.getElementById('profileForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const staffId = document.getElementById('profileStaffId').value;
+  const name = document.getElementById('profileInputName').value.trim();
+  const role = document.getElementById('profileInputRole').value.trim();
+  const phone = document.getElementById('profileInputPhone').value.trim();
+  const email = document.getElementById('profileInputEmail').value.trim();
+  const address = document.getElementById('profileInputAddress').value.trim();
+  const pin = document.getElementById('profileInputPin').value.trim();
+  const avatar_color = document.getElementById('profileColorPicker').value;
+
+  if (!name) {
+    showToast('Staff name is required', 'warning');
+    return;
+  }
+
+  try {
+    const payload = { id: staffId, name, role, phone, email, address, pin, avatar_color };
+    const res = await apiFetch('/api/staff/profile', {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+
+    if (res.staff) {
+      state.currentStaff = res.staff.name;
+      state.currentRole = res.staff.role;
+      localStorage.setItem('ygt_staff', res.staff.name);
+      localStorage.setItem('ygt_role', res.staff.role);
+      updateGreeting();
+      if (elements.currentStaffAvatar) {
+        elements.currentStaffAvatar.style.backgroundColor = res.staff.avatar_color || '#0071E3';
+      }
+    }
+    closeModal('profileModal');
+    showToast('Profile details saved successfully! 👤✨', 'success');
+  } catch (err) {
+    showToast('Failed to save profile: ' + err.message, 'danger');
+  }
+});
 
 function openNewStudentModal() {
   elements.studentEditForm.reset();

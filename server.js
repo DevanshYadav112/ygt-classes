@@ -241,6 +241,22 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, staff });
     }
 
+    if (pathname === '/api/staff/current' && req.method === 'GET') {
+      const staff = db.getStaffByName(staffName) || db.getStaffList()[0];
+      return sendJson(res, 200, { success: true, staff });
+    }
+
+    if (pathname === '/api/staff/profile' && req.method === 'PUT') {
+      const body = await parseJsonBody(req);
+      const staffId = body.id || (db.getStaffByName(staffName) || {}).id;
+      if (!staffId) return sendJson(res, 400, { error: 'Staff ID is required' });
+      const updated = db.updateStaffProfile(staffId, body);
+      if (!updated) return sendJson(res, 404, { error: 'Staff member not found' });
+      db.addActivityLog(staffName, 'PROFILE_UPDATED', `${staffName} updated their profile info`);
+      broadcast('data_changed', { type: 'staff_profile_updated', staff: updated });
+      return sendJson(res, 200, { success: true, staff: updated });
+    }
+
     if (pathname === '/api/staff' && req.method === 'POST') {
       const body = await parseJsonBody(req);
       if (!body.name) return sendJson(res, 400, { error: 'Staff name is required' });
