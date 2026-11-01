@@ -1632,11 +1632,28 @@ elements.studentEditForm.addEventListener('submit', async e => {
 });
 
 // ==========================================================
-// 12. VIEWS, TABS & DRAWER NAVIGATION CONTROL
+// 12. VIEWS, TABS & DRAWER NAVIGATION CONTROL (WITH MOBILE BACK BUTTON SUPPORT)
 // ==========================================================
-function switchView(viewName) {
+let isClosingModalProgrammatically = false;
+
+function switchView(viewName, pushHistory = true) {
+  const previousView = state.activeView;
   state.activeView = viewName;
   const isDashboard = viewName === 'dashboard';
+
+  if (pushHistory) {
+    try {
+      if (isDashboard) {
+        window.history.replaceState({ view: 'dashboard' }, '', window.location.pathname);
+      } else {
+        if (previousView === 'dashboard') {
+          window.history.pushState({ view: viewName }, '', '#' + viewName);
+        } else {
+          window.history.replaceState({ view: viewName }, '', '#' + viewName);
+        }
+      }
+    } catch (_) {}
+  }
 
   if (elements.welcomeBannerSection) elements.welcomeBannerSection.style.display = isDashboard ? '' : 'none';
   if (elements.statsGridSection) elements.statsGridSection.style.display = isDashboard ? '' : 'none';
@@ -1653,17 +1670,38 @@ function switchView(viewName) {
     return;
   }
 
-  if (viewName === 'pending-fees') switchTab('tab-pending-fees');
-  else if (viewName === 'batches') switchTab('tab-batches');
-  else if (viewName === 'students') switchTab('tab-students');
-  else if (viewName === 'attendance') switchTab('tab-attendance');
-  else if (viewName === 'activity-log') switchTab('tab-activity-log');
+  if (viewName === 'pending-fees') switchTab('tab-pending-fees', false);
+  else if (viewName === 'batches') switchTab('tab-batches', false);
+  else if (viewName === 'students') switchTab('tab-students', false);
+  else if (viewName === 'attendance') switchTab('tab-attendance', false);
+  else if (viewName === 'activity-log') switchTab('tab-activity-log', false);
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function switchTab(tabId) {
+function switchTab(tabId, pushHistory = true) {
   state.activeTab = tabId;
+  const tabViewMap = {
+    'tab-pending-fees': 'pending-fees',
+    'tab-batches': 'batches',
+    'tab-students': 'students',
+    'tab-attendance': 'attendance',
+    'tab-activity-log': 'activity-log'
+  };
+  const viewName = tabViewMap[tabId] || 'dashboard';
+
+  if (pushHistory && state.activeView !== viewName) {
+    const prevView = state.activeView;
+    state.activeView = viewName;
+    try {
+      if (prevView === 'dashboard') {
+        window.history.pushState({ view: viewName }, '', '#' + viewName);
+      } else {
+        window.history.replaceState({ view: viewName }, '', '#' + viewName);
+      }
+    } catch (_) {}
+  }
+
   if (elements.tabButtons && elements.tabButtons.length > 0) {
     elements.tabButtons.forEach(btn => {
       btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
@@ -1711,7 +1749,13 @@ elements.tabButtons.forEach(btn => {
 });
 
 if (elements.btnBackToHome) {
-  elements.btnBackToHome.addEventListener('click', () => switchView('dashboard'));
+  elements.btnBackToHome.addEventListener('click', () => {
+    if (window.history.state && window.history.state.view && window.history.state.view !== 'dashboard') {
+      window.history.back();
+    } else {
+      switchView('dashboard');
+    }
+  });
 }
 
 if (elements.hintOpenDrawerBtn) {
@@ -1736,8 +1780,21 @@ elements.tabInlineSearchInput.addEventListener('input', () => {
 
 // Drawer Navigation
 function toggleDrawer(open) {
-  elements.navDrawer.classList.toggle('open', open);
-  elements.drawerOverlay.classList.toggle('open', open);
+  const isOpen = elements.navDrawer.classList.contains('open');
+  if (open && !isOpen) {
+    elements.navDrawer.classList.add('open');
+    elements.drawerOverlay.classList.add('open');
+    try {
+      window.history.pushState({ drawer: true, view: state.activeView }, '', '#drawer');
+    } catch (_) {}
+  } else if (!open && isOpen) {
+    elements.navDrawer.classList.remove('open');
+    elements.drawerOverlay.classList.remove('open');
+    if (window.history.state && window.history.state.drawer) {
+      isClosingModalProgrammatically = true;
+      try { window.history.back(); } catch (_) {}
+    }
+  }
 }
 
 elements.menuToggleBtn.addEventListener('click', () => toggleDrawer(true));
@@ -1953,12 +2010,23 @@ elements.nextPageBtn.addEventListener('click', () => {
 // ==========================================================
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
-  if (modal) modal.classList.add('open');
+  if (modal) {
+    modal.classList.add('open');
+    try {
+      window.history.pushState({ modal: modalId, view: state.activeView }, '', '#modal-' + modalId);
+    } catch (_) {}
+  }
 }
 
 function closeModal(modalId) {
   const modal = document.getElementById(modalId);
-  if (modal) modal.classList.remove('open');
+  if (modal) {
+    modal.classList.remove('open');
+    if (window.history.state && window.history.state.modal === modalId) {
+      isClosingModalProgrammatically = true;
+      try { window.history.back(); } catch (_) {}
+    }
+  }
 }
 
 document.querySelectorAll('[data-close-modal]').forEach(btn => {
@@ -1967,8 +2035,42 @@ document.querySelectorAll('[data-close-modal]').forEach(btn => {
 
 document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
   backdrop.addEventListener('click', e => {
-    if (e.target === backdrop) backdrop.classList.remove('open');
+    if (e.target === backdrop) closeModal(backdrop.id);
   });
+});
+
+// Hardware / Mobile Gesture Back Button Handler
+window.addEventListener('popstate', (e) => {
+  if (isClosingModalProgrammatically) {
+    isClosingModalProgrammatically = false;
+    return;
+  }
+
+  // 1. If any modal is currently open, phone back closes the modal first
+  const openModals = document.querySelectorAll('.modal-backdrop.open');
+  if (openModals.length > 0) {
+    openModals.forEach(m => m.classList.remove('open'));
+    return;
+  }
+
+  // 2. If navigation drawer is open, phone back closes drawer
+  if (elements.navDrawer && elements.navDrawer.classList.contains('open')) {
+    elements.navDrawer.classList.remove('open');
+    elements.drawerOverlay.classList.remove('open');
+    return;
+  }
+
+  // 3. Tab navigation: If user is on any other tab (Fees, Batches, Attendance, etc.), phone back returns to Home!
+  const targetView = (e.state && e.state.view) ? e.state.view : 'dashboard';
+
+  if (targetView === 'dashboard') {
+    if (state.activeView !== 'dashboard') {
+      switchView('dashboard', false);
+    }
+    // If user is already on dashboard, standard browser back takes over (exits app)
+  } else {
+    switchView(targetView, false);
+  }
 });
 
 async function apiFetch(endpoint, options = {}) {
@@ -2112,6 +2214,13 @@ function dismissSplashScreen(minDuration = 800) {
 window.addEventListener('DOMContentLoaded', async () => {
   localStorage.removeItem('ygt_device_mode');
   document.body.classList.remove('mobile-simulator-active');
+
+  // Initialize base history state for mobile Back button support
+  try {
+    if (!window.history.state || !window.history.state.view) {
+      window.history.replaceState({ view: 'dashboard' }, '', window.location.pathname);
+    }
+  } catch (_) {}
 
   initTheme();
   initSplashScreen();
