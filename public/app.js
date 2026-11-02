@@ -729,6 +729,7 @@ function populateBatchDropdowns() {
     const currentVal = select.value;
     const isFilter = select === elements.filterBatchSelect;
     const isImport = select === elements.importBatchSelect;
+    const isAttendance = select === elements.attendanceBatchSelect;
 
     select.innerHTML = '';
 
@@ -742,6 +743,11 @@ function populateBatchDropdowns() {
       opt.value = '';
       opt.textContent = 'Auto-detect from "Batch Name" column in Excel';
       select.appendChild(opt);
+    } else if (isAttendance) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = '-- Select Batch to Take Attendance --';
+      select.appendChild(opt);
     }
 
     state.batches.forEach(b => {
@@ -753,8 +759,8 @@ function populateBatchDropdowns() {
 
     if (currentVal) {
       select.value = currentVal;
-    } else if (select === elements.attendanceBatchSelect && state.batches.length > 0) {
-      select.value = state.batches[0].id;
+    } else if (isAttendance) {
+      select.value = '';
     }
   });
 }
@@ -1128,31 +1134,42 @@ document.addEventListener('click', e => {
 // 8. ATTENDANCE (TEACHER VIEW - FAST MARKING & LIVE STATS)
 // ==========================================================
 async function loadBatchAttendance() {
-  let batchId = elements.attendanceBatchSelect?.value;
-  if (!batchId && state.batches && state.batches.length > 0) {
-    batchId = state.batches[0].id;
-    if (elements.attendanceBatchSelect) elements.attendanceBatchSelect.value = batchId;
-  }
-  if (!batchId) {
-    try {
-      const batchesRes = await apiFetch('/api/batches');
-      state.batches = batchesRes.batches || [];
-      populateBatchSelects();
-      batchId = state.batches[0]?.id;
-      if (elements.attendanceBatchSelect) elements.attendanceBatchSelect.value = batchId;
-    } catch (_) {}
-  }
+  const batchId = elements.attendanceBatchSelect?.value;
   const date = elements.attendanceDatePicker?.value || new Date().toISOString().slice(0, 10);
+  if (elements.attendanceDatePicker && !elements.attendanceDatePicker.value) {
+    elements.attendanceDatePicker.value = date;
+  }
+
+  // 1. If user has not chosen a batch, display the clean "Select Batch" view
   if (!batchId) {
+    state.attendanceRecords = [];
+    state.attendanceOriginalRecords = [];
+    state.attendanceHasRecorded = false;
+    state.attendanceDirty = false;
+
     if (elements.attendanceTableBody) {
-      elements.attendanceTableBody.innerHTML = `<tr><td colspan="2" class="text-center py-8 text-muted">No batches available. Please create a batch first.</td></tr>`;
+      elements.attendanceTableBody.innerHTML = `
+        <tr>
+          <td colspan="2">
+            <div class="empty-att-state">
+              <span class="empty-att-icon">📋</span>
+              <div class="empty-att-title">Select a Batch</div>
+              <p class="empty-att-desc">Please choose a coaching batch from the dropdown above to view or mark attendance.</p>
+            </div>
+          </td>
+        </tr>
+      `;
     }
-    if (elements.attLiveTotal) elements.attLiveTotal.textContent = '0';
-    if (elements.attLivePresent) elements.attLivePresent.textContent = '0';
-    if (elements.attLiveAbsent) elements.attLiveAbsent.textContent = '0';
-    if (elements.attLivePct) elements.attLivePct.textContent = '0%';
-    if (elements.attSummaryDateStr) elements.attSummaryDateStr.textContent = date;
-    updateSaveButtonVisibility();
+    if (elements.attTotalEnrolled) elements.attTotalEnrolled.textContent = '0';
+    if (elements.attPresentCount) elements.attPresentCount.textContent = '0';
+    if (elements.attAbsentCount) elements.attAbsentCount.textContent = '0';
+    if (elements.attRatePct) elements.attRatePct.textContent = '0%';
+    if (elements.attendanceDateBanner && elements.attStatusDot && elements.attStatusText) {
+      elements.attStatusDot.className = 'status-indicator-dot unsaved';
+      elements.attStatusText.textContent = `Select a coaching batch above to load student attendance sheet.`;
+    }
+    if (elements.btnEditAttendance) elements.btnEditAttendance.style.display = 'none';
+    hideAttendanceUnsavedBar();
     return;
   }
 
@@ -1164,44 +1181,44 @@ async function loadBatchAttendance() {
     const res = await apiFetch(`/api/attendance?batch_id=${batchId}&date=${date}`);
     const rawAttendance = res.attendance || [];
 
-    const isToday = date === new Date().toISOString().slice(0, 10);
     const hasRecorded = rawAttendance.some(r => r.status && r.status !== 'Unmarked');
 
     if (hasRecorded) {
-      // Attendance ALREADY recorded for this date -> Show Edit button, Hide Save button
+      // Attendance ALREADY recorded in database for this date -> Show recorded statuses!
       state.attendanceHasRecorded = true;
-      state.attendanceEditable = false;
-      state.attendanceDirty = false;
-      if (elements.btnEditAttendance) elements.btnEditAttendance.style.display = 'inline-flex';
-      updateSaveButtonVisibility();
-
-      state.attendanceRecords = rawAttendance.map(rec => ({ ...rec }));
-
-      if (elements.attendanceDateBanner && elements.attStatusDot && elements.attStatusText) {
-        elements.attendanceDateBanner.classList.remove('editing-active');
-        elements.attStatusDot.className = 'status-indicator-dot saved';
-        elements.attStatusText.textContent = `✓ Attendance recorded for ${date}. Tap "✏️ Edit Attendance" to make changes.`;
-      }
-    } else {
-      // NEW DAY: No attendance recorded yet -> Hide Edit button, Show Save button
-      state.attendanceHasRecorded = false;
-      state.attendanceEditable = true;
-      state.attendanceDirty = true;
-      if (elements.btnEditAttendance) elements.btnEditAttendance.style.display = 'none';
-      updateSaveButtonVisibility();
-
+      state.attendanceOriginalRecords = rawAttendance.map(rec => ({
+        ...rec,
+        status: rec.status === 'Unmarked' ? '' : rec.status
+      }));
       state.attendanceRecords = rawAttendance.map(rec => ({
         ...rec,
-        status: 'Present'
+        status: rec.status === 'Unmarked' ? '' : rec.status
+      }));
+
+      const marker = rawAttendance.find(r => r.marked_by_staff)?.marked_by_staff || 'Staff';
+      if (elements.attendanceDateBanner && elements.attStatusDot && elements.attStatusText) {
+        elements.attStatusDot.className = 'status-indicator-dot saved';
+        elements.attStatusText.textContent = `✓ Attendance recorded for ${date} (Marked by ${escapeHtml(marker)}). Tap Present or Absent to make changes.`;
+      }
+    } else {
+      // NEW DAY: No attendance recorded yet -> DO NOT default anyone to Present or Absent!
+      state.attendanceHasRecorded = false;
+      state.attendanceOriginalRecords = rawAttendance.map(rec => ({
+        ...rec,
+        status: '' // Unmarked! Neither Present nor Absent
+      }));
+      state.attendanceRecords = rawAttendance.map(rec => ({
+        ...rec,
+        status: '' // Unmarked! Neither Present nor Absent
       }));
 
       if (elements.attendanceDateBanner && elements.attStatusDot && elements.attStatusText) {
-        elements.attendanceDateBanner.classList.remove('editing-active');
         elements.attStatusDot.className = 'status-indicator-dot unsaved';
-        elements.attStatusText.textContent = `📋 New Day: Defaulted to Present. Mark any absentees and tap Save.`;
+        elements.attStatusText.textContent = `📋 Unmarked Sheet: Tap Present (✓) or Absent (✕) for each student, then tap Save below.`;
       }
     }
 
+    hideAttendanceUnsavedBar();
     renderAttendanceTable();
     updateAttendanceStats();
   } catch (err) {
@@ -1264,14 +1281,14 @@ function renderAttendanceTable() {
 
   elements.attendanceTableBody.innerHTML = visibleRecords
     .map(rec => {
-      const status = rec.status || 'Present';
-      const isAbsent = status === 'Absent';
-      const isPresent = status === 'Present';
+      const isPresent = rec.status === 'Present';
+      const isAbsent = rec.status === 'Absent';
 
       return `
         <tr class="${isAbsent ? 'row-absent-highlight' : ''}" data-student-id="${rec.student_id}">
           <td class="cell-student-name font-medium">
             <div class="student-name-main">${escapeHtml(rec.name)}</div>
+            ${rec.roll_no ? `<span class="student-roll-sub">Roll #${escapeHtml(rec.roll_no)}</span>` : ''}
           </td>
           <td style="text-align: right; width: 180px;">
             <div class="one-tap-att-group">
@@ -1297,38 +1314,55 @@ function renderAttendanceTable() {
   updateAttendanceStats();
 }
 
-// Instant One-Tap Toggle with zero lag
+// Instant One-Tap Toggle with neutral unmark support
 window.toggleAttendance = function(studentId, targetStatus) {
   const rec = state.attendanceRecords.find(r => r.student_id === studentId);
   if (!rec) return;
 
-  state.attendanceEditable = true;
-  state.attendanceDirty = true;
-  updateSaveButtonVisibility();
+  // Toggle: If clicking same status, unmark; otherwise set targetStatus
+  if (rec.status === targetStatus) {
+    rec.status = '';
+  } else {
+    rec.status = targetStatus;
+  }
 
-  // Toggle or set
-  rec.status = targetStatus;
-
-  // Optimistic UI update: update the row's buttons directly
+  // Update row buttons directly
   const row = document.querySelector(`tr[data-student-id="${studentId}"]`);
   if (row) {
     row.classList.toggle('row-absent-highlight', rec.status === 'Absent');
     const btnPresent = row.querySelector('.btn-one-tap.present');
     const btnAbsent = row.querySelector('.btn-one-tap.absent');
-    if (btnPresent && btnAbsent) {
-      btnPresent.classList.toggle('active', rec.status === 'Present');
-      btnAbsent.classList.toggle('active', rec.status === 'Absent');
-    }
+    if (btnPresent) btnPresent.classList.toggle('active', rec.status === 'Present');
+    if (btnAbsent) btnAbsent.classList.toggle('active', rec.status === 'Absent');
   }
 
-  // If a filter like 'PRESENT' or 'ABSENT' is active, re-render to reflect filtered view
   if (state.attendanceFilter !== 'ALL') {
     renderAttendanceTable();
   }
 
-  // Update live counters instantly
+  checkAttendanceChanges();
   updateAttendanceStats();
 };
+
+function checkAttendanceChanges() {
+  const hasChanged = state.attendanceRecords.some((rec, idx) => {
+    const orig = state.attendanceOriginalRecords[idx];
+    return !orig || (rec.status || '') !== (orig.status || '');
+  });
+
+  const bar = document.getElementById('attendanceUnsavedBar');
+  if (bar) {
+    if (hasChanged) {
+      bar.classList.add('show');
+    } else {
+      bar.classList.remove('show');
+    }
+  }
+}
+
+function hideAttendanceUnsavedBar() {
+  document.getElementById('attendanceUnsavedBar')?.classList.remove('show');
+}
 
 function updateAttendanceStats() {
   const total = state.attendanceRecords.length;
@@ -1349,73 +1383,80 @@ function updateAttendanceStats() {
 }
 
 document.getElementById('btnMarkAllPresent')?.addEventListener('click', () => {
-  state.attendanceEditable = true;
-  state.attendanceDirty = true;
-  updateSaveButtonVisibility();
   state.attendanceRecords.forEach(r => (r.status = 'Present'));
   renderAttendanceTable();
   updateAttendanceStats();
+  checkAttendanceChanges();
   document.getElementById('attDotsDropdown')?.classList.remove('show');
   showToast('✓ All students marked Present', 'info');
 });
 
 document.getElementById('btnMarkAllAbsent')?.addEventListener('click', () => {
-  state.attendanceEditable = true;
-  state.attendanceDirty = true;
-  updateSaveButtonVisibility();
   state.attendanceRecords.forEach(r => (r.status = 'Absent'));
   renderAttendanceTable();
   updateAttendanceStats();
+  checkAttendanceChanges();
   document.getElementById('attDotsDropdown')?.classList.remove('show');
   showToast('✕ All students marked Absent', 'warning');
 });
 
-if (elements.btnSaveAttendance) {
-  elements.btnSaveAttendance.addEventListener('click', async () => {
-    const batchId = elements.attendanceBatchSelect?.value;
-    const date = elements.attendanceDatePicker?.value;
-    if (!batchId || !date) return showToast('Please select batch and date', 'warning');
+// Cancel button reverts attendance
+document.getElementById('btnAttendanceCancel')?.addEventListener('click', () => {
+  state.attendanceRecords = state.attendanceOriginalRecords.map(r => ({ ...r }));
+  hideAttendanceUnsavedBar();
+  renderAttendanceTable();
+  updateAttendanceStats();
+  showToast('Attendance changes cancelled', 'info');
+});
 
-    const total = state.attendanceRecords.length;
+// Save button submits attendance
+document.getElementById('btnAttendanceSave')?.addEventListener('click', async () => {
+  const batchId = elements.attendanceBatchSelect?.value;
+  const date = elements.attendanceDatePicker?.value || new Date().toISOString().slice(0, 10);
+  if (!batchId || !date) return showToast('Please select batch and date', 'warning');
+
+  const markedRecords = state.attendanceRecords.filter(r => r.status === 'Present' || r.status === 'Absent');
+  if (markedRecords.length === 0) {
+    showToast('Please mark at least one student before saving', 'warning');
+    return;
+  }
+
+  const saveBtn = document.getElementById('btnAttendanceSave');
+  try {
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+    }
+
+    const payload = {
+      batch_id: batchId,
+      date,
+      records: state.attendanceRecords.map(r => ({ student_id: r.student_id, status: r.status || 'Unmarked' }))
+    };
+    const res = await apiFetch('/api/attendance', { method: 'POST', body: JSON.stringify(payload) });
+
+    state.attendanceOriginalRecords = state.attendanceRecords.map(r => ({ ...r }));
+    state.attendanceHasRecorded = true;
+    hideAttendanceUnsavedBar();
+
     const present = state.attendanceRecords.filter(r => r.status === 'Present').length;
     const absent = state.attendanceRecords.filter(r => r.status === 'Absent').length;
 
-    try {
-      elements.btnSaveAttendance.disabled = true;
-      elements.btnSaveAttendance.innerHTML = `<span>Saving...</span>`;
-
-      const payload = {
-        batch_id: batchId,
-        date,
-        records: state.attendanceRecords.map(r => ({ student_id: r.student_id, status: r.status }))
-      };
-      await apiFetch('/api/attendance', { method: 'POST', body: JSON.stringify(payload) });
-
-      showToast(`✅ Saved Attendance: ${present} Present, ${absent} Absent!`, 'success');
-
-      state.attendanceDirty = false;
-      state.attendanceEditable = false;
-      state.attendanceHasRecorded = true;
-      if (elements.btnEditAttendance) elements.btnEditAttendance.style.display = 'inline-flex';
-      updateSaveButtonVisibility();
-
-      if (elements.attendanceDateBanner && elements.attStatusDot && elements.attStatusText) {
-        elements.attendanceDateBanner.classList.remove('editing-active');
-        elements.attStatusDot.className = 'status-indicator-dot saved';
-        elements.attStatusText.textContent = `✓ Attendance saved successfully for ${date} (${present} Present, ${absent} Absent).`;
-      }
-
-      refreshDashboard();
-    } catch (err) {
-      showToast('Failed to save attendance: ' + err.message, 'danger');
-    } finally {
-      if (elements.btnSaveAttendance) {
-        elements.btnSaveAttendance.disabled = false;
-        elements.btnSaveAttendance.innerHTML = `<span>💾 Save</span>`;
-      }
+    if (elements.attendanceDateBanner && elements.attStatusDot && elements.attStatusText) {
+      elements.attStatusDot.className = 'status-indicator-dot saved';
+      elements.attStatusText.textContent = `✓ Attendance recorded for ${date} (Marked by ${escapeHtml(state.currentStaff)}). Tap Present or Absent to make changes.`;
     }
-  });
-}
+
+    showToast(`✓ Attendance Saved: ${present} Present, ${absent} Absent! 📋✨`, 'success');
+  } catch (err) {
+    showToast('Failed to save attendance: ' + err.message, 'danger');
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = '💾 Save Attendance';
+    }
+  }
+});
 
 // Attendance Edit Button
 if (elements.btnEditAttendance) {
@@ -1877,9 +1918,6 @@ function switchTab(tabId, pushHistory = true) {
     if (elements.activeViewTitle) elements.activeViewTitle.textContent = '📋 Attendance';
     if (elements.attendanceDatePicker && !elements.attendanceDatePicker.value) {
       elements.attendanceDatePicker.value = new Date().toISOString().slice(0, 10);
-    }
-    if (elements.attendanceBatchSelect && !elements.attendanceBatchSelect.value && state.batches.length > 0) {
-      elements.attendanceBatchSelect.value = state.batches[0].id;
     }
     loadBatchAttendance();
   } else if (tabId === 'tab-activity-log') {

@@ -112,30 +112,30 @@ const server = http.createServer(async (req, res) => {
 
     // 2. Dashboard Stats
     if (pathname === '/api/dashboard' && req.method === 'GET') {
-      const stats = db.getDashboardStats();
+      const stats = await db.getDashboardStats();
       return sendJson(res, 200, { success: true, stats });
     }
 
     // 3. Batches
     if (pathname === '/api/batches' && req.method === 'GET') {
-      const batches = db.getBatches();
+      const batches = await db.getBatches();
       return sendJson(res, 200, { success: true, batches });
     }
 
     if (pathname === '/api/batches' && req.method === 'POST') {
       const body = await parseJsonBody(req);
       if (!body.name) return sendJson(res, 400, { error: 'Batch name is required' });
-      const batchId = db.createBatch(body.name, body.code, body.schedule, body.default_fee);
-      db.addActivityLog(staffName, 'BATCH_CREATED', `${staffName} created new batch: ${body.name}`, null, batchId);
+      const batchId = await db.createBatch(body.name, body.code, body.schedule, body.default_fee);
+      await db.addActivityLog(staffName, 'BATCH_CREATED', `${staffName} created new batch: ${body.name}`, null, batchId);
       broadcast('data_changed', { type: 'batch_created', batchId, staffName });
       return sendJson(res, 201, { success: true, batchId });
     }
 
     if (pathname.startsWith('/api/batches/') && req.method === 'DELETE') {
       const id = pathname.split('/')[3];
-      const deleted = db.deleteBatch(id);
+      const deleted = await db.deleteBatch(id);
       if (!deleted) return sendJson(res, 404, { error: 'Batch not found' });
-      db.addActivityLog(staffName, 'BATCH_DELETED', `${staffName} deleted batch: ${deleted.name}`, null, id);
+      await db.addActivityLog(staffName, 'BATCH_DELETED', `${staffName} deleted batch: ${deleted.name}`, null, id);
       broadcast('data_changed', { type: 'batch_deleted', batchId: id, staffName });
       return sendJson(res, 200, { success: true, batch: deleted });
     }
@@ -148,13 +148,13 @@ const server = http.createServer(async (req, res) => {
       const limit = Number(parsedUrl.searchParams.get('limit')) || 200;
       const offset = Number(parsedUrl.searchParams.get('offset')) || 0;
 
-      const result = db.getStudents({ batch_id, search, pending_only, limit, offset });
+      const result = await db.getStudents({ batch_id, search, pending_only, limit, offset });
       return sendJson(res, 200, { success: true, ...result });
     }
 
     if (pathname.startsWith('/api/students/') && req.method === 'GET') {
       const id = pathname.split('/')[3];
-      const data = db.getStudentById(id);
+      const data = await db.getStudentById(id);
       if (!data) return sendJson(res, 404, { error: 'Student not found' });
       return sendJson(res, 200, { success: true, ...data });
     }
@@ -165,7 +165,7 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { error: 'Name, Roll No, and Batch are required' });
       }
       try {
-        const studentId = db.createStudent(body, staffName);
+        const studentId = await db.createStudent(body, staffName);
         broadcast('data_changed', { type: 'student_added', studentId, staffName });
         return sendJson(res, 201, { success: true, studentId });
       } catch (err) {
@@ -177,7 +177,7 @@ const server = http.createServer(async (req, res) => {
       const id = pathname.split('/')[3];
       const body = await parseJsonBody(req);
       try {
-        db.updateStudent(id, body, staffName);
+        await db.updateStudent(id, body, staffName);
         broadcast('data_changed', { type: 'student_updated', studentId: id, staffName });
         return sendJson(res, 200, { success: true });
       } catch (err) {
@@ -194,7 +194,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       try {
-        const paymentResult = db.recordFeePayment(student_id, amount, payment_mode, reference_no, notes, staffName);
+        const paymentResult = await db.recordFeePayment(student_id, amount, payment_mode, reference_no, notes, staffName);
         broadcast('fee_update', { paymentResult, staffName });
         return sendJson(res, 200, { success: true, payment: paymentResult });
       } catch (err) {
@@ -208,7 +208,7 @@ const server = http.createServer(async (req, res) => {
       const date = parsedUrl.searchParams.get('date') || new Date().toISOString().slice(0, 10);
       if (!batch_id) return sendJson(res, 400, { error: 'batch_id is required' });
 
-      const attendance = db.getBatchAttendance(batch_id, date);
+      const attendance = await db.getBatchAttendance(batch_id, date);
       return sendJson(res, 200, { success: true, date, batch_id, attendance });
     }
 
@@ -220,7 +220,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       try {
-        const result = db.saveBatchAttendance(batch_id, date, records, staffName);
+        const result = await db.saveBatchAttendance(batch_id, date, records, staffName);
         broadcast('attendance_update', { batch_id, date, result, staffName });
         return sendJson(res, 200, { success: true, result });
       } catch (err) {
@@ -231,28 +231,28 @@ const server = http.createServer(async (req, res) => {
     // 7. Activity Logs
     if (pathname === '/api/logs' && req.method === 'GET') {
       const limit = Number(parsedUrl.searchParams.get('limit')) || 50;
-      const logs = db.getActivityLogs(limit);
+      const logs = await db.getActivityLogs(limit);
       return sendJson(res, 200, { success: true, logs });
     }
 
     // 8. Staff Management
     if (pathname === '/api/staff' && req.method === 'GET') {
-      const staff = db.getStaffList();
+      const staff = await db.getStaffList();
       return sendJson(res, 200, { success: true, staff });
     }
 
     if (pathname === '/api/staff/current' && req.method === 'GET') {
-      const staff = db.getStaffByName(staffName) || db.getStaffList()[0];
+      const staff = (await db.getStaffByName(staffName)) || (await db.getStaffList())[0];
       return sendJson(res, 200, { success: true, staff });
     }
 
     if (pathname === '/api/staff/profile' && req.method === 'PUT') {
       const body = await parseJsonBody(req);
-      const staffId = body.id || (db.getStaffByName(staffName) || {}).id;
+      const staffId = body.id || ((await db.getStaffByName(staffName)) || {}).id;
       if (!staffId) return sendJson(res, 400, { error: 'Staff ID is required' });
-      const updated = db.updateStaffProfile(staffId, body);
+      const updated = await db.updateStaffProfile(staffId, body);
       if (!updated) return sendJson(res, 404, { error: 'Staff member not found' });
-      db.addActivityLog(staffName, 'PROFILE_UPDATED', `${staffName} updated their profile info`);
+      await db.addActivityLog(staffName, 'PROFILE_UPDATED', `${staffName} updated their profile info`);
       broadcast('data_changed', { type: 'staff_profile_updated', staff: updated });
       return sendJson(res, 200, { success: true, staff: updated });
     }
@@ -260,16 +260,16 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/staff' && req.method === 'POST') {
       const body = await parseJsonBody(req);
       if (!body.name) return sendJson(res, 400, { error: 'Staff name is required' });
-      const newStaff = db.addStaff(body.name, body.role);
+      const newStaff = await db.addStaff(body.name, body.role);
       broadcast('data_changed', { type: 'staff_added', staff: newStaff });
       return sendJson(res, 201, { success: true, staff: newStaff });
     }
 
     if (pathname.startsWith('/api/staff/') && req.method === 'DELETE') {
       const id = pathname.split('/')[3];
-      const deleted = db.deleteStaff(id);
+      const deleted = await db.deleteStaff(id);
       if (!deleted) return sendJson(res, 404, { error: 'Staff member not found' });
-      db.addActivityLog(staffName, 'STAFF_DELETED', `${staffName} deleted staff member: ${deleted.name}`);
+      await db.addActivityLog(staffName, 'STAFF_DELETED', `${staffName} deleted staff member: ${deleted.name}`);
       broadcast('data_changed', { type: 'staff_deleted', id, staffName });
       return sendJson(res, 200, { success: true, staff: deleted });
     }
@@ -361,7 +361,7 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { error: 'No valid student records found in file' });
       }
 
-      const importResult = db.bulkImportStudents(studentsToImport, batchId || 1, staffName);
+      const importResult = await db.bulkImportStudents(studentsToImport, batchId || 1, staffName);
       broadcast('data_changed', { type: 'excel_imported', importResult, staffName });
 
       return sendJson(res, 200, {

@@ -783,10 +783,15 @@
               </div>
             </div>
 
-            <!-- Floating Bottom-Right Save Action Button -->
-            <button type="button" class="floating-save-btn" id="btnSaveAttendance" style="display: none;" title="Save Attendance">
-              <span>💾 Save</span>
-            </button>
+            <!-- FLOATING DUAL ACTION BAR: Cancel & Save Attendance (App-wide Neomorphic Depth UI) -->
+            <div id="attendanceUnsavedBar" class="attendance-unsaved-action-bar">
+              <button type="button" class="btn btn-att-cancel" id="btnAttendanceCancel">
+                ✕ Cancel
+              </button>
+              <button type="button" class="btn btn-att-save" id="btnAttendanceSave">
+                💾 Save Attendance
+              </button>
+            </div>
 
           </div>
         </div>

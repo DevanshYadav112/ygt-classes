@@ -2,377 +2,201 @@ const { DatabaseSync } = require('node:sqlite');
 const path = require('node:path');
 const fs = require('node:fs');
 
+// Turso Cloud SQLite Configuration
+const TURSO_URL = process.env.TURSO_DATABASE_URL || 'https://ygt-classes-devanshyadav112.aws-ap-south-1.turso.io';
+const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN || 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTM1OTgwNzcsImlkIjoiMDFhMTlhYzUtNWIwMS03YWRjLWI3ZTctOWM3MWFjZTJlNzVlIiwia2lkIjoiOTYxbm5Uemx5YUg5aDhMemdYN0Mta1VtS1pUZjJPN2xqNmlORExrQjBaUSIsInJpZCI6ImM2YTk2NTZhLTE2OTAtNDA3Ni1iMGRhLTg0MWYyNzhlYWRkMyJ9.Lh7WWjnYnDVelxjnNeM9FudaakJDndyvHUCPA0LBQ99eRCfocxw-mTFuqq2PQN8Klfp3h9dZC-lhlSsuDBEHDA';
+
+function formatArg(val) {
+  if (val === null || val === undefined) return { type: 'null' };
+  if (typeof val === 'number') {
+    if (Number.isInteger(val)) return { type: 'integer', value: String(val) };
+    return { type: 'float', value: val };
+  }
+  if (typeof val === 'boolean') return { type: 'integer', value: val ? '1' : '0' };
+  return { type: 'text', value: String(val) };
+}
+
+class TursoClient {
+  constructor(url, token) {
+    this.baseUrl = (url || '').replace(/^libsql:\/\//, 'https://').replace(/\/$/, '');
+    this.token = token;
+  }
+
+  buildExecuteRequest(sql, args = []) {
+    return {
+      type: 'execute',
+      stmt: {
+        sql,
+        args: args.map(formatArg)
+      }
+    };
+  }
+
+  async execute(sql, args = []) {
+    const payload = {
+      requests: [
+        this.buildExecuteRequest(sql, args),
+        { type: 'close' }
+      ]
+    };
+
+    const res = await fetch(`${this.baseUrl}/v2/pipeline`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`Turso HTTP Error (${res.status}): ${txt}`);
+    }
+
+    const data = await res.json();
+    const resultBlock = data.results && data.results[0];
+    if (resultBlock?.type === 'error') {
+      throw new Error(`Turso SQL Error: ${resultBlock.error?.message}`);
+    }
+
+    const resResult = resultBlock?.response?.result;
+    if (!resResult) return { rows: [], affectedRows: 0, lastInsertRowid: null };
+
+    const cols = (resResult.cols || []).map(c => c.name);
+    const rows = (resResult.rows || []).map(row => {
+      const obj = {};
+      row.forEach((cell, idx) => {
+        let val = cell.value;
+        if (cell.type === 'integer') val = Number(cell.value);
+        else if (cell.type === 'float') val = Number(cell.value);
+        else if (cell.type === 'null') val = null;
+        obj[cols[idx]] = val;
+      });
+      return obj;
+    });
+
+    return {
+      rows,
+      affectedRows: resResult.affected_row_count || 0,
+      lastInsertRowid: resResult.last_insert_rowid ? Number(resResult.last_insert_rowid) : null
+    };
+  }
+
+  async all(sql, args = []) {
+    const res = await this.execute(sql, args);
+    return res.rows;
+  }
+
+  async get(sql, args = []) {
+    const res = await this.execute(sql, args);
+    return res.rows[0] || null;
+  }
+
+  async run(sql, args = []) {
+    return await this.execute(sql, args);
+  }
+
+  async batch(statements) {
+    const requests = statements.map(s => {
+      const sql = typeof s === 'string' ? s : s.sql;
+      const args = typeof s === 'string' ? [] : (s.args || []);
+      return this.buildExecuteRequest(sql, args);
+    });
+    requests.push({ type: 'close' });
+
+    const res = await fetch(`${this.baseUrl}/v2/pipeline`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ requests })
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`Turso HTTP Error (${res.status}): ${txt}`);
+    }
+
+    const data = await res.json();
+    return (data.results || []).map(r => {
+      if (r.type === 'error') throw new Error(r.error?.message || 'Turso batch execution error');
+      return r.response?.result;
+    });
+  }
+}
+
 function initDb(dbFilePath) {
+  let useTurso = Boolean(TURSO_URL && TURSO_TOKEN);
+  let tursoClient = null;
+  let localDb = null;
+
+  if (useTurso) {
+    try {
+      tursoClient = new TursoClient(TURSO_URL, TURSO_TOKEN);
+      console.log('🌐 Connected to Turso Cloud SQLite Database (AWS AP South - Mumbai)');
+    } catch (err) {
+      console.warn('⚠️ Could not initialize Turso client, falling back to local SQLite:', err.message);
+      useTurso = false;
+    }
+  }
+
+  // Local fallback
   const dir = path.dirname(dbFilePath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-
-  const db = new DatabaseSync(dbFilePath);
-  db.exec('PRAGMA foreign_keys = ON;');
-  db.exec('PRAGMA journal_mode = WAL;');
-
-  // Automatic Migration: Drop & rebuild tables if students table has legacy schema (e.g. global roll_no UNIQUE) or legacy demo batches
+  localDb = new DatabaseSync(dbFilePath);
   try {
-    let shouldRebuildTables = false;
-    const studentsTableSql = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='students'").get()?.sql || '';
-    if (studentsTableSql && (studentsTableSql.includes('roll_no TEXT UNIQUE') || !studentsTableSql.includes('UNIQUE(batch_id, roll_no)'))) {
-      shouldRebuildTables = true;
-    }
-    try {
-      const hasLegacyBatches = db.prepare("SELECT id FROM batches WHERE name LIKE '%JEE%' OR name LIKE '%NEET%' LIMIT 1").get();
-      if (hasLegacyBatches) {
-        shouldRebuildTables = true;
-      }
-    } catch (_) {}
-
-    if (shouldRebuildTables) {
-      db.exec(`
-        DROP TABLE IF EXISTS attendance;
-        DROP TABLE IF EXISTS fee_transactions;
-        DROP TABLE IF EXISTS activity_logs;
-        DROP TABLE IF EXISTS students;
-        DROP TABLE IF EXISTS batches;
-      `);
-    }
+    localDb.exec('PRAGMA foreign_keys = ON;');
+    localDb.exec('PRAGMA journal_mode = WAL;');
   } catch (_) {}
 
-  // Schema creation
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS staff (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE NOT NULL,
-      role TEXT NOT NULL DEFAULT 'Staff Member',
-      avatar_color TEXT DEFAULT '#6366f1',
-      is_owner INTEGER DEFAULT 0,
-      pin TEXT,
-      phone TEXT DEFAULT '',
-      can_view_fees INTEGER DEFAULT 1,
-      can_collect_fees INTEGER DEFAULT 1,
-      can_mark_attendance INTEGER DEFAULT 1,
-      can_import_excel INTEGER DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS batches (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE NOT NULL,
-      code TEXT,
-      schedule TEXT,
-      default_fee REAL DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS students (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      roll_no TEXT NOT NULL,
-      name TEXT NOT NULL,
-      batch_id INTEGER NOT NULL REFERENCES batches(id) ON DELETE CASCADE,
-      parent_name TEXT,
-      parent_phone TEXT,
-      student_phone TEXT,
-      email TEXT,
-      address TEXT,
-      gender TEXT DEFAULT 'Other',
-      total_fee REAL DEFAULT 0,
-      fees_paid REAL DEFAULT 0,
-      status TEXT DEFAULT 'Active',
-      notes TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(batch_id, roll_no)
-    );
-
-    CREATE TABLE IF NOT EXISTS attendance (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-      batch_id INTEGER NOT NULL REFERENCES batches(id) ON DELETE CASCADE,
-      date TEXT NOT NULL,
-      status TEXT NOT NULL, -- 'Present', 'Absent', 'Late', 'Excused'
-      marked_by_staff TEXT,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(student_id, date)
-    );
-
-    CREATE TABLE IF NOT EXISTS fee_transactions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-      amount REAL NOT NULL,
-      payment_date TEXT NOT NULL,
-      payment_mode TEXT DEFAULT 'Cash',
-      reference_no TEXT,
-      staff_name TEXT NOT NULL,
-      notes TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS activity_logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      staff_name TEXT NOT NULL,
-      action_type TEXT NOT NULL,
-      description TEXT NOT NULL,
-      student_id INTEGER,
-      batch_id INTEGER,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_students_batch ON students(batch_id);
-    CREATE INDEX IF NOT EXISTS idx_students_roll ON students(roll_no);
-    CREATE INDEX IF NOT EXISTS idx_students_phone ON students(parent_phone);
-    CREATE INDEX IF NOT EXISTS idx_attendance_batch_date ON attendance(batch_id, date);
-    CREATE INDEX IF NOT EXISTS idx_fees_student ON fee_transactions(student_id);
-    CREATE INDEX IF NOT EXISTS idx_activity_created ON activity_logs(created_at DESC);
-  `);
-
-  // Ensure staff table columns exist if upgrading from legacy schema
-  try { db.exec("ALTER TABLE staff ADD COLUMN role TEXT NOT NULL DEFAULT 'Staff Member';"); } catch (_) {}
-  try { db.exec("ALTER TABLE staff ADD COLUMN avatar_color TEXT DEFAULT '#6366f1';"); } catch (_) {}
-  try { db.exec('ALTER TABLE staff ADD COLUMN is_owner INTEGER DEFAULT 0;'); } catch (_) {}
-  try { db.exec('ALTER TABLE staff ADD COLUMN pin TEXT;'); } catch (_) {}
-  try { db.exec("ALTER TABLE staff ADD COLUMN phone TEXT DEFAULT '';"); } catch (_) {}
-  try { db.exec("ALTER TABLE staff ADD COLUMN email TEXT DEFAULT '';"); } catch (_) {}
-  try { db.exec("ALTER TABLE staff ADD COLUMN address TEXT DEFAULT '';"); } catch (_) {}
-  try { db.exec("ALTER TABLE staff ADD COLUMN avatar_image TEXT DEFAULT '';"); } catch (_) {}
-  try { db.exec('ALTER TABLE staff ADD COLUMN can_view_fees INTEGER DEFAULT 1;'); } catch (_) {}
-  try { db.exec('ALTER TABLE staff ADD COLUMN can_collect_fees INTEGER DEFAULT 1;'); } catch (_) {}
-  try { db.exec('ALTER TABLE staff ADD COLUMN can_mark_attendance INTEGER DEFAULT 1;'); } catch (_) {}
-  try { db.exec('ALTER TABLE staff ADD COLUMN can_import_excel INTEGER DEFAULT 1;'); } catch (_) {}
-
-  // Seed default director staff if empty
-  const staffCount = db.prepare('SELECT COUNT(*) as count FROM staff').get().count;
-  if (staffCount === 0) {
-    const insertStaff = db.prepare('INSERT INTO staff (name, role, avatar_color, is_owner, pin) VALUES (?, ?, ?, ?, ?)');
-    insertStaff.run('Mr. Roshan Yadav', 'Institute Director (Owner)', '#6366f1', 1, '1234');
-  }
-
-  // 1. Purge legacy demo batches (JEE / NEET) if present in database
-  const legacyCheck = db.prepare("SELECT id FROM batches WHERE name LIKE '%JEE%' OR name LIKE '%NEET%' LIMIT 1").get();
-  if (legacyCheck) {
-    db.exec('DELETE FROM attendance;');
-    db.exec('DELETE FROM fee_transactions;');
-    db.exec('DELETE FROM activity_logs;');
-    db.exec('DELETE FROM students;');
-    db.exec('DELETE FROM batches;');
-  }
-
-  // 2. Ensure official coaching batches & students are seeded if empty
-  const batchCount = db.prepare('SELECT COUNT(*) as count FROM batches').get().count;
-  if (batchCount === 0) {
-    const batchDefs = [
-      { name: 'Non-School', code: 'NON-SCH', fee: 0 },
-      { name: 'Jr. KG', code: 'JR-KG', fee: 0 },
-      { name: 'Sr. KG', code: 'SR-KG', fee: 0 },
-      { name: '1st Std - Class 1', code: 'STD-01', fee: 5000 },
-      { name: '2nd Std - Class 2', code: 'STD-02', fee: 5000 },
-      { name: '5th Std', code: 'STD-05', fee: 0 },
-      { name: '6th Std', code: 'STD-06', fee: 0 },
-      { name: '7th Std', code: 'STD-07', fee: 0 },
-      { name: '8th Std', code: 'STD-08', fee: 0 },
-      { name: '9th Std', code: 'STD-09', fee: 0 },
-      { name: '10th Std', code: 'STD-10', fee: 0 }
-    ];
-
-    const insertB = db.prepare('INSERT INTO batches (name, code, default_fee) VALUES (?, ?, ?)');
-    const bMap = {};
-    for (const b of batchDefs) {
-      const res = insertB.run(b.name, b.code, b.fee);
-      bMap[b.name] = res.lastInsertRowid;
-    }
-
-    const officialRoster = [
-      // Non-School
-      { b: 'Non-School', r: '1', n: 'Aaradhya', t: 0, p: 0 },
-      { b: 'Non-School', r: '2', n: 'Moksh', t: 0, p: 0 },
-      { b: 'Non-School', r: '3', n: 'Naitik', t: 0, p: 0 },
-      { b: 'Non-School', r: '4', n: 'Virat', t: 0, p: 0 },
-
-      // Jr. KG
-      { b: 'Jr. KG', r: '1', n: 'Aarush', t: 0, p: 0 },
-      { b: 'Jr. KG', r: '2', n: 'Aarushi', t: 0, p: 0 },
-      { b: 'Jr. KG', r: '3', n: 'Aatif', t: 0, p: 0 },
-      { b: 'Jr. KG', r: '4', n: 'Advik', t: 0, p: 0 },
-      { b: 'Jr. KG', r: '5', n: 'Anshu', t: 0, p: 0 },
-      { b: 'Jr. KG', r: '6', n: 'Anurag', t: 0, p: 0 },
-      { b: 'Jr. KG', r: '7', n: 'Karthik', t: 0, p: 0 },
-      { b: 'Jr. KG', r: '8', n: 'Naira', t: 0, p: 0 },
-      { b: 'Jr. KG', r: '9', n: 'Ovi', t: 0, p: 0 },
-      { b: 'Jr. KG', r: '10', n: 'Shivanshi', t: 0, p: 0 },
-
-      // Sr. KG
-      { b: 'Sr. KG', r: '1', n: 'Ananya', t: 0, p: 0 },
-      { b: 'Sr. KG', r: '2', n: 'Anvi', t: 0, p: 0 },
-      { b: 'Sr. KG', r: '3', n: 'Kunal', t: 0, p: 0 },
-      { b: 'Sr. KG', r: '4', n: 'Sanchit', t: 0, p: 0 },
-      { b: 'Sr. KG', r: '5', n: 'Shivanya', t: 0, p: 0 },
-
-      // 1st Std - Class 1
-      { b: '1st Std - Class 1', r: '1', n: 'Aarushi Chauhan', t: 5000, p: 0 },
-      { b: '1st Std - Class 1', r: '2', n: 'Aryan Pandey', t: 5000, p: 0 },
-      { b: '1st Std - Class 1', r: '3', n: 'Kanak', t: 5000, p: 0 },
-      { b: '1st Std - Class 1', r: '4', n: 'Kanishk Yadav', t: 5000, p: 0 },
-      { b: '1st Std - Class 1', r: '5', n: 'Pranay', t: 5000, p: 0 },
-      { b: '1st Std - Class 1', r: '6', n: 'Riddhi Chauhan', t: 5000, p: 1000 },
-      { b: '1st Std - Class 1', r: '7', n: 'Riyansh Karmode', t: 5000, p: 0 },
-      { b: '1st Std - Class 1', r: '8', n: 'Samarth Waikar', t: 5000, p: 0 },
-      { b: '1st Std - Class 1', r: '9', n: 'Siddharth', t: 5000, p: 0 },
-      { b: '1st Std - Class 1', r: '10', n: 'Vibha Sakpal', t: 5000, p: 0 },
-      { b: '1st Std - Class 1', r: '11', n: 'Yash Yadav', t: 5000, p: 0 },
-
-      // 2nd Std - Class 2
-      { b: '2nd Std - Class 2', r: '1', n: 'Aarav Tripathi', t: 5000, p: 0 },
-      { b: '2nd Std - Class 2', r: '2', n: 'Akhil', t: 5000, p: 0 },
-      { b: '2nd Std - Class 2', r: '3', n: 'Ananya Pasi', t: 5000, p: 1000 },
-      { b: '2nd Std - Class 2', r: '4', n: 'Ananya Yadav', t: 5000, p: 0 },
-      { b: '2nd Std - Class 2', r: '5', n: 'Asad Shaikh', t: 5000, p: 0 },
-      { b: '2nd Std - Class 2', r: '6', n: 'Devansh More', t: 5000, p: 0 },
-      { b: '2nd Std - Class 2', r: '7', n: 'Hardit', t: 5000, p: 0 },
-      { b: '2nd Std - Class 2', r: '8', n: 'Manas', t: 5000, p: 0 },
-      { b: '2nd Std - Class 2', r: '9', n: 'Mrudul Kadam', t: 5000, p: 1000 },
-      { b: '2nd Std - Class 2', r: '10', n: 'Mrunmayi Lande', t: 5000, p: 0 },
-      { b: '2nd Std - Class 2', r: '11', n: 'Najis', t: 5000, p: 0 },
-      { b: '2nd Std - Class 2', r: '12', n: 'Renuvanshikumari', t: 5000, p: 0 },
-      { b: '2nd Std - Class 2', r: '13', n: 'Shivansh', t: 5000, p: 0 },
-      { b: '2nd Std - Class 2', r: '14', n: 'Shivanya More', t: 5000, p: 0 },
-      { b: '2nd Std - Class 2', r: '15', n: 'Shreya Maurya', t: 5000, p: 0 },
-      { b: '2nd Std - Class 2', r: '16', n: 'Tanishq Tambe', t: 5000, p: 1000 },
-      { b: '2nd Std - Class 2', r: '17', n: 'Urvi Dhotre', t: 5000, p: 0 },
-      { b: '2nd Std - Class 2', r: '18', n: 'Urvi S.', t: 5000, p: 0 },
-
-      // 5th Std
-      { b: '5th Std', r: '1', n: 'Aadarsh Yadav', t: 0, p: 0 },
-      { b: '5th Std', r: '2', n: 'Ananya Mishra', t: 0, p: 0 },
-      { b: '5th Std', r: '3', n: 'Anshuman', t: 1600, p: 0 },
-      { b: '5th Std', r: '4', n: 'Atul Yadav', t: 0, p: 0 },
-      { b: '5th Std', r: '5', n: 'Daksh Sawant', t: 0, p: 0 },
-      { b: '5th Std', r: '6', n: 'Jagdheshwari', t: 4000, p: 0 },
-      { b: '5th Std', r: '7', n: 'Joshwa H.', t: 4100, p: 0 },
-      { b: '5th Std', r: '8', n: 'Kanak Y.', t: 5000, p: 0 },
-      { b: '5th Std', r: '9', n: 'Manisha C.', t: 3600, p: 0 },
-      { b: '5th Std', r: '10', n: 'Omkar More', t: 3000, p: 0 },
-      { b: '5th Std', r: '11', n: 'Ragini Chauhan', t: 3000, p: 0 },
-      { b: '5th Std', r: '12', n: 'Sahil Shaikh', t: 5600, p: 0 },
-      { b: '5th Std', r: '13', n: 'Shaurya K.', t: 4600, p: 0 },
-      { b: '5th Std', r: '14', n: 'Siddharth Yadav', t: 5600, p: 0 },
-      { b: '5th Std', r: '15', n: 'Smarnika A.', t: 3600, p: 0 },
-      { b: '5th Std', r: '16', n: 'Utsav Pal', t: 2000, p: 0 },
-      { b: '5th Std', r: '17', n: 'Viraj Jadhav', t: 3600, p: 0 },
-      { b: '5th Std', r: '18', n: 'Viral Tambe', t: 2600, p: 0 },
-      { b: '5th Std', r: '19', n: 'Virat Yadav', t: 3600, p: 0 },
-      { b: '5th Std', r: '20', n: 'Yash Nishad', t: 4600, p: 0 },
-
-      // 6th Std
-      { b: '6th Std', r: '1', n: 'Aarohi Prajapati', t: 4200, p: 0 },
-      { b: '6th Std', r: '2', n: 'Abhishek Gupta', t: 6200, p: 0 },
-      { b: '6th Std', r: '3', n: 'Anant Mishra', t: 0, p: 0 },
-      { b: '6th Std', r: '4', n: 'Ansh Yadav', t: 5200, p: 0 },
-      { b: '6th Std', r: '5', n: 'Anushka Sakpal', t: 2200, p: 0 },
-      { b: '6th Std', r: '6', n: 'Arnav Yadav', t: 0, p: 0 },
-      { b: '6th Std', r: '7', n: 'Avantika Ram', t: 0, p: 0 },
-      { b: '6th Std', r: '8', n: 'Avi Yadav', t: 5200, p: 0 },
-      { b: '6th Std', r: '9', n: 'Hritwik Waghmare', t: 3700, p: 0 },
-      { b: '6th Std', r: '10', n: 'Ishita Yadav', t: 5000, p: 0 },
-      { b: '6th Std', r: '11', n: 'Kevailya Jadhav', t: 6700, p: 0 },
-      { b: '6th Std', r: '12', n: 'Nayan Pashte', t: 3000, p: 0 },
-      { b: '6th Std', r: '13', n: 'Ovi Wadkar', t: 4200, p: 0 },
-      { b: '6th Std', r: '14', n: 'Pranav Pandey', t: 0, p: 0 },
-      { b: '6th Std', r: '15', n: 'Rishika Yadav', t: 3200, p: 0 },
-      { b: '6th Std', r: '16', n: 'Rohan Jaiswar', t: 4500, p: 0 },
-      { b: '6th Std', r: '17', n: 'Rudra Surve', t: 4500, p: 0 },
-      { b: '6th Std', r: '18', n: 'Sarthak Dubey', t: 4000, p: 0 },
-      { b: '6th Std', r: '19', n: 'Shagun Yadav', t: 4000, p: 0 },
-      { b: '6th Std', r: '20', n: 'Soham Jaid', t: 4200, p: 0 },
-
-      // 7th Std
-      { b: '7th Std', r: '1', n: 'Aayush Kushwaha', t: 5700, p: 0 },
-      { b: '7th Std', r: '2', n: 'Abhinav Yadav', t: 0, p: 0 },
-      { b: '7th Std', r: '3', n: 'Adarsh', t: 7800, p: 0 },
-      { b: '7th Std', r: '4', n: 'Ajinkya Shinde', t: 7800, p: 0 },
-      { b: '7th Std', r: '5', n: 'Ayan Shaikh', t: 6800, p: 0 },
-      { b: '7th Std', r: '6', n: 'Bilal Makandar', t: 0, p: 0 },
-      { b: '7th Std', r: '7', n: 'Dev Sharma', t: 6300, p: 0 },
-      { b: '7th Std', r: '8', n: 'Dhanshree', t: 4800, p: 0 },
-      { b: '7th Std', r: '9', n: 'Ibrahim', t: 5800, p: 0 },
-      { b: '7th Std', r: '10', n: 'Janvi', t: 4800, p: 0 },
-      { b: '7th Std', r: '11', n: 'Mayank', t: 5400, p: 0 },
-      { b: '7th Std', r: '12', n: 'Pranit', t: 3000, p: 0 },
-      { b: '7th Std', r: '13', n: 'Riya', t: 6000, p: 0 },
-      { b: '7th Std', r: '14', n: 'Rudra', t: 7800, p: 0 },
-      { b: '7th Std', r: '15', n: 'Samarth', t: 5800, p: 0 },
-      { b: '7th Std', r: '16', n: 'Saras', t: 7000, p: 0 },
-      { b: '7th Std', r: '17', n: 'Shivam', t: 6500, p: 0 },
-      { b: '7th Std', r: '18', n: 'Shivansh', t: 5800, p: 0 },
-      { b: '7th Std', r: '19', n: 'Tannu', t: 7500, p: 0 },
-      { b: '7th Std', r: '20', n: 'Viraj', t: 0, p: 0 },
-      { b: '7th Std', r: '21', n: 'Vivek', t: 6500, p: 0 },
-
-      // 8th Std
-      { b: '8th Std', r: '1', n: 'Anit Yadav', t: 5000, p: 0 },
-      { b: '8th Std', r: '2', n: 'Anshika Yadav', t: 0, p: 0 },
-      { b: '8th Std', r: '3', n: 'Ashish Houmbale', t: 7000, p: 0 },
-      { b: '8th Std', r: '4', n: 'Dilesh Yadav', t: 8500, p: 0 },
-      { b: '8th Std', r: '5', n: 'Janvi Ram', t: 0, p: 0 },
-      { b: '8th Std', r: '6', n: 'Laksh Yadav', t: 0, p: 0 },
-      { b: '8th Std', r: '7', n: 'Mangalam Dubey', t: 6000, p: 0 },
-      { b: '8th Std', r: '8', n: 'Pradnesh Pawar', t: 6000, p: 0 },
-      { b: '8th Std', r: '9', n: 'Princy Pal', t: 6000, p: 0 },
-      { b: '8th Std', r: '10', n: 'Priya Sutar', t: 5500, p: 0 },
-      { b: '8th Std', r: '11', n: 'Rishabh Yadav', t: 0, p: 0 },
-      { b: '8th Std', r: '12', n: 'Simon Pal', t: 4000, p: 0 },
-
-      // 9th Std
-      { b: '9th Std', r: '1', n: 'Aryan Dhanraj', t: 9300, p: 0 },
-      { b: '9th Std', r: '2', n: 'Neeraj Yadav', t: 0, p: 0 },
-      { b: '9th Std', r: '3', n: 'Pritam Shukla', t: 9000, p: 0 },
-      { b: '9th Std', r: '4', n: 'Raunak Yadav', t: 8000, p: 0 },
-      { b: '9th Std', r: '5', n: 'Shlok Shukla', t: 0, p: 0 },
-      { b: '9th Std', r: '6', n: 'Yash Yadav', t: 0, p: 0 },
-
-      // 10th Std
-      { b: '10th Std', r: '1', n: 'Aryan Jha', t: 0, p: 0 },
-      { b: '10th Std', r: '2', n: 'Krishna Shukla', t: 13000, p: 0 },
-      { b: '10th Std', r: '3', n: 'Namasvi Rajbhar', t: 15000, p: 0 },
-      { b: '10th Std', r: '4', n: 'Nirmala', t: 0, p: 0 },
-      { b: '10th Std', r: '5', n: 'Priya Gupta', t: 13000, p: 0 },
-      { b: '10th Std', r: '6', n: 'Sai Mane', t: 13000, p: 0 }
-    ];
-
-    const insertS = db.prepare(`
-      INSERT OR REPLACE INTO students (roll_no, name, batch_id, total_fee, fees_paid, parent_phone, notes)
-      VALUES (?, ?, ?, ?, ?, '', 'Official Coaching Roster')
-    `);
-    const insertFee = db.prepare(`
-      INSERT INTO fee_transactions (student_id, amount, payment_date, payment_mode, reference_no, staff_name, notes)
-      VALUES (?, ?, datetime('now', 'localtime'), 'Admission / Cash', 'INIT-' || ?, 'Mr. Roshan Yadav', 'Initial admission payment recorded')
-    `);
-
-    for (const s of officialRoster) {
-      const bId = bMap[s.b];
-      if (!bId) continue;
+  // Helper query runner that uses Turso when active, or local SQLite
+  async function queryAll(sql, args = []) {
+    if (useTurso && tursoClient) {
       try {
-        const res = insertS.run(s.r, s.n, bId, s.t, s.p);
-        if (s.p > 0 && res.lastInsertRowid) {
-          insertFee.run(res.lastInsertRowid, s.p, res.lastInsertRowid);
-        }
+        return await tursoClient.all(sql, args);
       } catch (err) {
-        console.warn(`Warning inserting student ${s.n} in ${s.b}:`, err.message);
+        console.warn('Turso query error, trying local:', err.message);
       }
     }
+    return localDb.prepare(sql).all(...args);
+  }
 
-    db.prepare(`
-      INSERT INTO activity_logs (staff_name, action_type, description)
-      VALUES (?, 'ROSTER_IMPORT', ?)
-    `).run(
-      'Mr. Roshan Yadav',
-      `Mr. Roshan Yadav loaded official coaching roster: ${officialRoster.length} students across ${batchDefs.length} batches`
-    );
+  async function queryGet(sql, args = []) {
+    if (useTurso && tursoClient) {
+      try {
+        return await tursoClient.get(sql, args);
+      } catch (err) {
+        console.warn('Turso query error, trying local:', err.message);
+      }
+    }
+    return localDb.prepare(sql).get(...args);
+  }
+
+  async function executeRun(sql, args = []) {
+    if (useTurso && tursoClient) {
+      try {
+        return await tursoClient.run(sql, args);
+      } catch (err) {
+        console.warn('Turso run error, trying local:', err.message);
+      }
+    }
+    const info = localDb.prepare(sql).run(...args);
+    return {
+      affectedRows: info.changes || 0,
+      lastInsertRowid: info.lastInsertRowid ? Number(info.lastInsertRowid) : null
+    };
   }
 
   return {
-    db,
+    isCloud: () => useTurso,
 
     // Batches
-    getBatches() {
-      return db.prepare(`
+    async getBatches() {
+      return await queryAll(`
         SELECT b.*, 
           COUNT(s.id) as student_count,
           COALESCE(SUM(s.total_fee), 0) as total_fees,
@@ -382,28 +206,30 @@ function initDb(dbFilePath) {
         LEFT JOIN students s ON s.batch_id = b.id
         GROUP BY b.id
         ORDER BY b.id ASC
-      `).all();
+      `);
     },
 
-    createBatch(name, code, schedule, defaultFee) {
-      const stmt = db.prepare('INSERT INTO batches (name, code, schedule, default_fee) VALUES (?, ?, ?, ?)');
-      const info = stmt.run(name, code || '', schedule || '', Number(defaultFee) || 0);
-      return info.lastInsertRowid;
+    async createBatch(name, code, schedule, defaultFee) {
+      const res = await executeRun(
+        'INSERT INTO batches (name, code, schedule, default_fee) VALUES (?, ?, ?, ?)',
+        [name, code || '', schedule || '', Number(defaultFee) || 0]
+      );
+      return res.lastInsertRowid;
     },
 
-    deleteBatch(id) {
+    async deleteBatch(id) {
       const numId = Number(id);
-      const batch = db.prepare('SELECT * FROM batches WHERE id = ?').get(numId);
+      const batch = await queryGet('SELECT * FROM batches WHERE id = ?', [numId]);
       if (!batch) return null;
-      db.prepare('DELETE FROM attendance WHERE batch_id = ?').run(numId);
-      db.prepare('DELETE FROM fee_transactions WHERE student_id IN (SELECT id FROM students WHERE batch_id = ?)').run(numId);
-      db.prepare('DELETE FROM students WHERE batch_id = ?').run(numId);
-      db.prepare('DELETE FROM batches WHERE id = ?').run(numId);
+      await executeRun('DELETE FROM attendance WHERE batch_id = ?', [numId]);
+      await executeRun('DELETE FROM fee_transactions WHERE student_id IN (SELECT id FROM students WHERE batch_id = ?)', [numId]);
+      await executeRun('DELETE FROM students WHERE batch_id = ?', [numId]);
+      await executeRun('DELETE FROM batches WHERE id = ?', [numId]);
       return batch;
     },
 
     // Students
-    getStudents({ batch_id, search, pending_only, limit = 100, offset = 0 } = {}) {
+    async getStudents({ batch_id, search, pending_only, limit = 100, offset = 0 } = {}) {
       let sql = `
         SELECT s.*, b.name as batch_name, b.code as batch_code,
           (s.total_fee - s.fees_paid) as pending_fee
@@ -428,11 +254,10 @@ function initDb(dbFilePath) {
         params.push(term, term, term, term, term);
       }
 
-      // Count query
       const countSql = `SELECT COUNT(*) as total FROM (${sql})`;
-      const totalCount = db.prepare(countSql).get(...params).total;
+      const countRes = await queryGet(countSql, params);
+      const totalCount = countRes?.total || 0;
 
-      // Sorting
       if (pending_only) {
         sql += ` ORDER BY pending_fee DESC, s.name ASC`;
       } else {
@@ -442,38 +267,37 @@ function initDb(dbFilePath) {
       sql += ` LIMIT ? OFFSET ?`;
       params.push(Number(limit), Number(offset));
 
-      const rows = db.prepare(sql).all(...params);
+      const rows = await queryAll(sql, params);
       return { total: totalCount, students: rows };
     },
 
-    getStudentById(id) {
-      const student = db.prepare(`
+    async getStudentById(id) {
+      const student = await queryGet(`
         SELECT s.*, b.name as batch_name, b.code as batch_code,
           (s.total_fee - s.fees_paid) as pending_fee
         FROM students s
         JOIN batches b ON s.batch_id = b.id
         WHERE s.id = ?
-      `).get(Number(id));
+      `, [Number(id)]);
 
       if (!student) return null;
 
-      const transactions = db.prepare(`
+      const transactions = await queryAll(`
         SELECT * FROM fee_transactions WHERE student_id = ? ORDER BY created_at DESC
-      `).all(Number(id));
+      `, [Number(id)]);
 
-      const recentAttendance = db.prepare(`
+      const recentAttendance = await queryAll(`
         SELECT * FROM attendance WHERE student_id = ? ORDER BY date DESC LIMIT 30
-      `).all(Number(id));
+      `, [Number(id)]);
 
       return { student, transactions, attendance: recentAttendance };
     },
 
-    createStudent(data, staffName = 'Staff') {
-      const stmt = db.prepare(`
+    async createStudent(data, staffName = 'Staff') {
+      const res = await executeRun(`
         INSERT INTO students (roll_no, name, batch_id, parent_name, parent_phone, student_phone, email, address, gender, total_fee, fees_paid, notes)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      const info = stmt.run(
+      `, [
         data.roll_no ? data.roll_no.toString() : '',
         data.name,
         Number(data.batch_id),
@@ -486,18 +310,18 @@ function initDb(dbFilePath) {
         Number(data.total_fee) || 0,
         Number(data.fees_paid) || 0,
         data.notes || ''
-      );
+      ]);
 
-      const studentId = info.lastInsertRowid;
+      const studentId = res.lastInsertRowid;
 
-      if (Number(data.fees_paid) > 0) {
-        db.prepare(`
+      if (Number(data.fees_paid) > 0 && studentId) {
+        await executeRun(`
           INSERT INTO fee_transactions (student_id, amount, payment_date, payment_mode, reference_no, staff_name, notes)
           VALUES (?, ?, datetime('now', 'localtime'), 'Initial / Advance', 'INIT-' || ?, ?, 'Initial fee during admission')
-        `).run(studentId, Number(data.fees_paid), studentId, staffName);
+        `, [studentId, Number(data.fees_paid), studentId, staffName]);
       }
 
-      this.addActivityLog(
+      await this.addActivityLog(
         staffName,
         'STUDENT_ADDED',
         `${staffName} enrolled new student ${data.name} (Roll: ${data.roll_no}) in Batch`,
@@ -508,11 +332,11 @@ function initDb(dbFilePath) {
       return studentId;
     },
 
-    updateStudent(id, data, staffName = 'Staff') {
-      const old = db.prepare('SELECT * FROM students WHERE id = ?').get(Number(id));
+    async updateStudent(id, data, staffName = 'Staff') {
+      const old = await queryGet('SELECT * FROM students WHERE id = ?', [Number(id)]);
       if (!old) throw new Error('Student not found');
 
-      db.prepare(`
+      await executeRun(`
         UPDATE students SET
           name = ?,
           roll_no = ?,
@@ -528,7 +352,7 @@ function initDb(dbFilePath) {
           notes = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-      `).run(
+      `, [
         data.name,
         data.roll_no,
         Number(data.batch_id),
@@ -542,9 +366,9 @@ function initDb(dbFilePath) {
         data.status || 'Active',
         data.notes || '',
         Number(id)
-      );
+      ]);
 
-      this.addActivityLog(
+      await this.addActivityLog(
         staffName,
         'STUDENT_UPDATED',
         `${staffName} updated details for ${data.name} (Roll: ${data.roll_no})`,
@@ -556,31 +380,33 @@ function initDb(dbFilePath) {
     },
 
     // Fees Recording & Ledger
-    recordFeePayment(studentId, amount, paymentMode = 'Cash', refNo = '', notes = '', staffName = 'Staff') {
+    async recordFeePayment(studentId, amount, paymentMode = 'Cash', refNo = '', notes = '', staffName = 'Staff') {
       const numAmount = Number(amount);
       if (isNaN(numAmount) || numAmount <= 0) {
         throw new Error('Valid positive fee amount required');
       }
 
-      const student = db.prepare('SELECT s.*, b.name as batch_name FROM students s JOIN batches b ON s.batch_id = b.id WHERE s.id = ?').get(Number(studentId));
+      const student = await queryGet(
+        'SELECT s.*, b.name as batch_name FROM students s JOIN batches b ON s.batch_id = b.id WHERE s.id = ?',
+        [Number(studentId)]
+      );
       if (!student) throw new Error('Student not found');
 
       // 1. Insert fee transaction
-      const feeStmt = db.prepare(`
+      await executeRun(`
         INSERT INTO fee_transactions (student_id, amount, payment_date, payment_mode, reference_no, staff_name, notes)
         VALUES (?, ?, datetime('now', 'localtime'), ?, ?, ?, ?)
-      `);
-      feeStmt.run(Number(studentId), numAmount, paymentMode, refNo || ('TXN-' + Date.now().toString().slice(-6)), staffName, notes || '');
+      `, [Number(studentId), numAmount, paymentMode, refNo || ('TXN-' + Date.now().toString().slice(-6)), staffName, notes || '']);
 
       // 2. Update students table fees_paid
       const newPaid = Number(student.fees_paid) + numAmount;
-      db.prepare('UPDATE students SET fees_paid = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(newPaid, Number(studentId));
+      await executeRun('UPDATE students SET fees_paid = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [newPaid, Number(studentId)]);
 
       const pendingAfter = Math.max(0, Number(student.total_fee) - newPaid);
 
       // 3. Activity log
       const logDesc = `${staffName} updated ₹${numAmount.toLocaleString('en-IN')} fees for ${student.name} [${student.batch_name}] (Pending: ₹${pendingAfter.toLocaleString('en-IN')})`;
-      this.addActivityLog(staffName, 'FEE_UPDATE', logDesc, Number(studentId), student.batch_id);
+      await this.addActivityLog(staffName, 'FEE_UPDATE', logDesc, Number(studentId), student.batch_id);
 
       return {
         studentId: student.id,
@@ -594,8 +420,8 @@ function initDb(dbFilePath) {
     },
 
     // Attendance
-    getBatchAttendance(batchId, date) {
-      return db.prepare(`
+    async getBatchAttendance(batchId, date) {
+      return await queryAll(`
         SELECT s.id as student_id, s.name, s.roll_no, s.parent_phone,
           COALESCE(a.status, 'Unmarked') as status,
           a.marked_by_staff,
@@ -604,55 +430,60 @@ function initDb(dbFilePath) {
         LEFT JOIN attendance a ON a.student_id = s.id AND a.date = ?
         WHERE s.batch_id = ? AND s.status = 'Active'
         ORDER BY s.roll_no ASC, s.name ASC
-      `).all(date, Number(batchId));
+      `, [date, Number(batchId)]);
     },
 
-    saveBatchAttendance(batchId, date, records, staffName = 'Staff') {
-      const insertOrUpdate = db.prepare(`
-        INSERT INTO attendance (student_id, batch_id, date, status, marked_by_staff, updated_at)
-        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(student_id, date) DO UPDATE SET
-          status = excluded.status,
-          marked_by_staff = excluded.marked_by_staff,
-          updated_at = CURRENT_TIMESTAMP
-      `);
-
+    async saveBatchAttendance(batchId, date, records, staffName = 'Staff') {
       let presentCount = 0;
       let absentCount = 0;
 
+      if (useTurso && tursoClient) {
+        // Fast batch execution via Turso pipeline
+        const stmts = records.map(rec => ({
+          sql: `
+            INSERT INTO attendance (student_id, batch_id, date, status, marked_by_staff, updated_at)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(student_id, date) DO UPDATE SET
+              status = excluded.status,
+              marked_by_staff = excluded.marked_by_staff,
+              updated_at = CURRENT_TIMESTAMP;
+          `,
+          args: [Number(rec.student_id), Number(batchId), date, rec.status || 'Unmarked', staffName]
+        }));
+        await tursoClient.batch(stmts);
+      } else {
+        const insertOrUpdate = localDb.prepare(`
+          INSERT INTO attendance (student_id, batch_id, date, status, marked_by_staff, updated_at)
+          VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(student_id, date) DO UPDATE SET
+            status = excluded.status,
+            marked_by_staff = excluded.marked_by_staff,
+            updated_at = CURRENT_TIMESTAMP
+        `);
+        for (const rec of records) {
+          insertOrUpdate.run(Number(rec.student_id), Number(batchId), date, rec.status || 'Unmarked', staffName);
+        }
+      }
+
       for (const rec of records) {
-        insertOrUpdate.run(Number(rec.student_id), Number(batchId), date, rec.status, staffName);
         if (rec.status === 'Present') presentCount++;
         else if (rec.status === 'Absent') absentCount++;
       }
 
-      const batch = db.prepare('SELECT name FROM batches WHERE id = ?').get(Number(batchId));
+      const batch = await queryGet('SELECT name FROM batches WHERE id = ?', [Number(batchId)]);
       const batchName = batch ? batch.name : `Batch #${batchId}`;
 
       const logDesc = `${staffName} marked attendance for ${batchName} on ${date}: ${presentCount} Present, ${absentCount} Absent`;
-      this.addActivityLog(staffName, 'ATTENDANCE_MARKED', logDesc, null, Number(batchId));
+      await this.addActivityLog(staffName, 'ATTENDANCE_MARKED', logDesc, null, Number(batchId));
 
       return { presentCount, absentCount, total: records.length, logDesc };
     },
 
-    // Bulk Import
-    bulkImportStudents(studentsList, defaultBatchId, staffName = 'Staff') {
+    // Bulk Import Students from Excel/CSV
+    async bulkImportStudents(studentsList, defaultBatchId, staffName = 'Staff') {
       let inserted = 0;
       let updated = 0;
       let skipped = 0;
-
-      const checkBatchStmt = db.prepare('SELECT id FROM batches WHERE name = ? COLLATE NOCASE');
-      const createBatchStmt = db.prepare('INSERT INTO batches (name, default_fee) VALUES (?, ?)');
-      const checkStudentStmt = db.prepare('SELECT id, total_fee, fees_paid FROM students WHERE roll_no = ? AND batch_id = ?');
-      const insertStmt = db.prepare(`
-        INSERT INTO students (roll_no, name, batch_id, parent_name, parent_phone, student_phone, email, total_fee, fees_paid, notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      const updateStmt = db.prepare(`
-        UPDATE students SET
-          name = ?, batch_id = ?, parent_name = ?, parent_phone = ?, total_fee = ?, fees_paid = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `);
 
       for (const item of studentsList) {
         if (!item.name || !item.roll_no) {
@@ -662,21 +493,28 @@ function initDb(dbFilePath) {
 
         let targetBatchId = defaultBatchId;
         if (item.batch_name) {
-          const existingBatch = checkBatchStmt.get(item.batch_name.trim());
+          const existingBatch = await queryGet('SELECT id FROM batches WHERE name = ? COLLATE NOCASE', [item.batch_name.trim()]);
           if (existingBatch) {
             targetBatchId = existingBatch.id;
           } else {
-            const newB = createBatchStmt.run(item.batch_name.trim(), Number(item.total_fee) || 50000);
+            const newB = await executeRun('INSERT INTO batches (name, default_fee) VALUES (?, ?)', [item.batch_name.trim(), Number(item.total_fee) || 50000]);
             targetBatchId = newB.lastInsertRowid;
           }
         }
 
-        const existingStudent = checkStudentStmt.get(item.roll_no.toString().trim(), Number(targetBatchId));
+        const existingStudent = await queryGet('SELECT id, total_fee, fees_paid FROM students WHERE roll_no = ? AND batch_id = ?', [
+          item.roll_no.toString().trim(),
+          Number(targetBatchId)
+        ]);
         const totalFee = Number(item.total_fee) || 0;
         const feesPaid = Number(item.fees_paid) || 0;
 
         if (existingStudent) {
-          updateStmt.run(
+          await executeRun(`
+            UPDATE students SET
+              name = ?, batch_id = ?, parent_name = ?, parent_phone = ?, total_fee = ?, fees_paid = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `, [
             item.name.trim(),
             Number(targetBatchId),
             item.parent_name || '',
@@ -684,10 +522,13 @@ function initDb(dbFilePath) {
             totalFee,
             feesPaid,
             existingStudent.id
-          );
+          ]);
           updated++;
         } else {
-          insertStmt.run(
+          await executeRun(`
+            INSERT INTO students (roll_no, name, batch_id, parent_name, parent_phone, student_phone, email, total_fee, fees_paid, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
             item.roll_no.toString().trim(),
             item.name.trim(),
             Number(targetBatchId),
@@ -698,37 +539,36 @@ function initDb(dbFilePath) {
             totalFee,
             feesPaid,
             item.notes || 'Imported via Excel'
-          );
+          ]);
           inserted++;
         }
       }
 
       const logDesc = `${staffName} imported Excel batch: ${inserted} students added, ${updated} updated`;
-      this.addActivityLog(staffName, 'EXCEL_IMPORT', logDesc, null, Number(defaultBatchId) || null);
+      await this.addActivityLog(staffName, 'EXCEL_IMPORT', logDesc, null, Number(defaultBatchId) || null);
 
       return { inserted, updated, skipped, total: studentsList.length, logDesc };
     },
 
     // Activity Log & Audit Feed
-    getActivityLogs(limit = 60) {
-      return db.prepare(`
+    async getActivityLogs(limit = 60) {
+      return await queryAll(`
         SELECT a.*, b.name as batch_name, s.name as student_name
         FROM activity_logs a
         LEFT JOIN batches b ON a.batch_id = b.id
         LEFT JOIN students s ON a.student_id = s.id
         ORDER BY a.id DESC
         LIMIT ?
-      `).all(Number(limit));
+      `, [Number(limit)]);
     },
 
-    addActivityLog(staffName, actionType, description, studentId = null, batchId = null) {
-      const stmt = db.prepare(`
+    async addActivityLog(staffName, actionType, description, studentId = null, batchId = null) {
+      const res = await executeRun(`
         INSERT INTO activity_logs (staff_name, action_type, description, student_id, batch_id)
         VALUES (?, ?, ?, ?, ?)
-      `);
-      const info = stmt.run(staffName, actionType, description, studentId ? Number(studentId) : null, batchId ? Number(batchId) : null);
+      `, [staffName, actionType, description, studentId ? Number(studentId) : null, batchId ? Number(batchId) : null]);
       return {
-        id: info.lastInsertRowid,
+        id: res.lastInsertRowid,
         staff_name: staffName,
         action_type: actionType,
         description,
@@ -737,8 +577,8 @@ function initDb(dbFilePath) {
     },
 
     // Dashboard Overview
-    getDashboardStats() {
-      const totals = db.prepare(`
+    async getDashboardStats() {
+      const totals = await queryGet(`
         SELECT 
           COUNT(id) as total_students,
           COALESCE(SUM(total_fee), 0) as total_fees,
@@ -746,32 +586,33 @@ function initDb(dbFilePath) {
           COALESCE(SUM(total_fee - fees_paid), 0) as total_pending
         FROM students
         WHERE status = 'Active'
-      `).get();
+      `) || { total_students: 0, total_fees: 0, total_paid: 0, total_pending: 0 };
 
-      const batchCount = db.prepare('SELECT COUNT(*) as count FROM batches').get().count;
+      const batchCountRes = await queryGet('SELECT COUNT(*) as count FROM batches') || { count: 0 };
+      const batchCount = batchCountRes.count;
 
       const today = new Date().toISOString().slice(0, 10);
-      const todayCollections = db.prepare(`
+      const todayCollectionsRes = await queryGet(`
         SELECT COALESCE(SUM(amount), 0) as total
         FROM fee_transactions
         WHERE date(payment_date) = date('now', 'localtime')
-      `).get().total;
+      `) || { total: 0 };
 
-      const todayAttendance = db.prepare(`
+      const todayAttendance = await queryGet(`
         SELECT 
           COUNT(*) as total_marked,
           SUM(CASE WHEN status = 'Present' THEN 1 ELSE 0 END) as present_count
         FROM attendance
         WHERE date = date('now', 'localtime')
-      `).get();
+      `) || { total_marked: 0, present_count: 0 };
 
-      const attendancePct = todayAttendance.total_marked > 0
-        ? Math.round((todayAttendance.present_count / todayAttendance.total_marked) * 100)
-        : null;
+      const totalMarked = todayAttendance.total_marked || 0;
+      const presentCount = todayAttendance.present_count || 0;
+      const attendancePct = totalMarked > 0 ? Math.round((presentCount / totalMarked) * 100) : null;
 
-      const pendingStudentsCount = db.prepare(`
+      const pendingStudentsRes = await queryGet(`
         SELECT COUNT(*) as count FROM students WHERE status = 'Active' AND (total_fee - fees_paid) > 0
-      `).get().count;
+      `) || { count: 0 };
 
       return {
         totalStudents: totals.total_students,
@@ -779,30 +620,31 @@ function initDb(dbFilePath) {
         totalFees: totals.total_fees,
         totalPaid: totals.total_paid,
         totalPending: totals.total_pending,
-        pendingStudentsCount,
-        todayCollections,
+        pendingStudentsCount: pendingStudentsRes.count,
+        todayCollections: todayCollectionsRes.total,
         attendanceTodayPct: attendancePct,
-        todayPresent: todayAttendance.present_count || 0,
-        todayMarked: todayAttendance.total_marked || 0
+        todayPresent: presentCount,
+        todayMarked: totalMarked
       };
     },
 
-    getStaffList() {
-      return db.prepare('SELECT * FROM staff ORDER BY id ASC').all();
+    async getStaffList() {
+      return await queryAll('SELECT * FROM staff ORDER BY id ASC');
     },
 
-    getStaffByName(name) {
-      return db.prepare('SELECT * FROM staff WHERE name = ?').get(name);
+    async getStaffByName(name) {
+      return await queryGet('SELECT * FROM staff WHERE name = ?', [name]);
     },
 
-    getStaffById(id) {
-      return db.prepare('SELECT * FROM staff WHERE id = ?').get(Number(id));
+    async getStaffById(id) {
+      return await queryGet('SELECT * FROM staff WHERE id = ?', [Number(id)]);
     },
 
-    updateStaffProfile(id, data) {
-      const staff = db.prepare('SELECT * FROM staff WHERE id = ?').get(Number(id));
+    async updateStaffProfile(id, data) {
+      const staff = await queryGet('SELECT * FROM staff WHERE id = ?', [Number(id)]);
       if (!staff) return null;
-      db.prepare(`
+
+      await executeRun(`
         UPDATE staff
         SET name = COALESCE(?, name),
             role = COALESCE(?, role),
@@ -813,7 +655,7 @@ function initDb(dbFilePath) {
             avatar_image = COALESCE(?, avatar_image),
             pin = COALESCE(?, pin)
         WHERE id = ?
-      `).run(
+      `, [
         data.name || staff.name,
         data.role || staff.role,
         data.phone !== undefined ? data.phone : staff.phone,
@@ -823,20 +665,20 @@ function initDb(dbFilePath) {
         data.avatar_image !== undefined ? data.avatar_image : staff.avatar_image,
         data.pin !== undefined ? data.pin : staff.pin,
         Number(id)
-      );
-      return db.prepare('SELECT * FROM staff WHERE id = ?').get(Number(id));
+      ]);
+
+      return await queryGet('SELECT * FROM staff WHERE id = ?', [Number(id)]);
     },
 
-    addStaff(name, role = 'Staff Member') {
-      const stmt = db.prepare('INSERT INTO staff (name, role) VALUES (?, ?)');
-      const info = stmt.run(name, role);
-      return { id: info.lastInsertRowid, name, role };
+    async addStaff(name, role = 'Staff Member') {
+      const res = await executeRun('INSERT INTO staff (name, role) VALUES (?, ?)', [name, role]);
+      return { id: res.lastInsertRowid, name, role };
     },
 
-    deleteStaff(id) {
-      const staff = db.prepare('SELECT * FROM staff WHERE id = ?').get(id);
+    async deleteStaff(id) {
+      const staff = await queryGet('SELECT * FROM staff WHERE id = ?', [Number(id)]);
       if (!staff) return null;
-      db.prepare('DELETE FROM staff WHERE id = ?').run(id);
+      await executeRun('DELETE FROM staff WHERE id = ?', [Number(id)]);
       return staff;
     }
   };
