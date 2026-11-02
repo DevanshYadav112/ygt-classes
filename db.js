@@ -16,6 +16,37 @@ function formatArg(val) {
   return { type: 'text', value: String(val) };
 }
 
+function getBatchRomanPrefix(batchName) {
+  const name = (batchName || '').trim();
+  if (/10/i.test(name)) return 'X';
+  if (/11/i.test(name)) return 'XI';
+  if (/12/i.test(name)) return 'XII';
+  if (/1st|class\s*1\b/i.test(name)) return 'I';
+  if (/2nd|class\s*2\b/i.test(name)) return 'II';
+  if (/3rd|class\s*3\b/i.test(name)) return 'III';
+  if (/4th|class\s*4\b/i.test(name)) return 'IV';
+  if (/5th|class\s*5\b/i.test(name)) return 'V';
+  if (/6th|class\s*6\b/i.test(name)) return 'VI';
+  if (/7th|class\s*7\b/i.test(name)) return 'VII';
+  if (/8th|class\s*8\b/i.test(name)) return 'VIII';
+  if (/9th|class\s*9\b/i.test(name)) return 'IX';
+  if (/jr\.?\s*kg/i.test(name)) return 'JKG';
+  if (/sr\.?\s*kg/i.test(name)) return 'SKG';
+  if (/non[\s-]*school/i.test(name)) return 'NS';
+  return name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase() || 'STD';
+}
+
+function formatStudentRollNo(rawRoll, batchName) {
+  if (!rawRoll && rawRoll !== 0) return '';
+  const prefix = getBatchRomanPrefix(batchName);
+  const str = rawRoll.toString().trim();
+  if (str.toUpperCase().startsWith(prefix.toUpperCase())) {
+    return prefix + str.slice(prefix.length).trim();
+  }
+  const num = str.replace(/^[a-zA-Z\s-_]+/, '').trim() || str;
+  return `${prefix}${num}`;
+}
+
 class TursoClient {
   constructor(url, token) {
     this.baseUrl = (url || '').replace(/^libsql:\/\//, 'https://').replace(/\/$/, '');
@@ -261,7 +292,7 @@ function initDb(dbFilePath) {
       if (pending_only) {
         sql += ` ORDER BY pending_fee DESC, s.name ASC`;
       } else {
-        sql += ` ORDER BY s.batch_id ASC, s.name ASC`;
+        sql += ` ORDER BY s.batch_id ASC, length(s.roll_no) ASC, s.roll_no ASC, s.name ASC`;
       }
 
       sql += ` LIMIT ? OFFSET ?`;
@@ -294,11 +325,15 @@ function initDb(dbFilePath) {
     },
 
     async createStudent(data, staffName = 'Staff') {
+      const batch = await queryGet('SELECT name FROM batches WHERE id = ?', [Number(data.batch_id)]);
+      const batchName = batch ? batch.name : '';
+      const formattedRoll = formatStudentRollNo(data.roll_no, batchName);
+
       const res = await executeRun(`
         INSERT INTO students (roll_no, name, batch_id, parent_name, parent_phone, student_phone, email, address, gender, total_fee, fees_paid, notes)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
-        data.roll_no ? data.roll_no.toString() : '',
+        formattedRoll,
         data.name,
         Number(data.batch_id),
         data.parent_name || '',
@@ -324,7 +359,7 @@ function initDb(dbFilePath) {
       await this.addActivityLog(
         staffName,
         'STUDENT_ADDED',
-        `${staffName} enrolled new student ${data.name} (Roll: ${data.roll_no}) in Batch`,
+        `${staffName} enrolled new student ${data.name} (Roll: ${formattedRoll}) in Batch`,
         studentId,
         Number(data.batch_id)
       );
@@ -335,6 +370,10 @@ function initDb(dbFilePath) {
     async updateStudent(id, data, staffName = 'Staff') {
       const old = await queryGet('SELECT * FROM students WHERE id = ?', [Number(id)]);
       if (!old) throw new Error('Student not found');
+
+      const batch = await queryGet('SELECT name FROM batches WHERE id = ?', [Number(data.batch_id)]);
+      const batchName = batch ? batch.name : '';
+      const formattedRoll = formatStudentRollNo(data.roll_no, batchName);
 
       await executeRun(`
         UPDATE students SET
@@ -354,7 +393,7 @@ function initDb(dbFilePath) {
         WHERE id = ?
       `, [
         data.name,
-        data.roll_no,
+        formattedRoll,
         Number(data.batch_id),
         data.parent_name || '',
         data.parent_phone || '',
@@ -371,7 +410,7 @@ function initDb(dbFilePath) {
       await this.addActivityLog(
         staffName,
         'STUDENT_UPDATED',
-        `${staffName} updated details for ${data.name} (Roll: ${data.roll_no})`,
+        `${staffName} updated details for ${data.name} (Roll: ${formattedRoll})`,
         Number(id),
         Number(data.batch_id)
       );
@@ -429,7 +468,7 @@ function initDb(dbFilePath) {
         FROM students s
         LEFT JOIN attendance a ON a.student_id = s.id AND a.date = ?
         WHERE s.batch_id = ? AND s.status = 'Active'
-        ORDER BY s.roll_no ASC, s.name ASC
+        ORDER BY length(s.roll_no) ASC, s.roll_no ASC, s.name ASC
       `, [date, Number(batchId)]);
     },
 
@@ -492,18 +531,26 @@ function initDb(dbFilePath) {
         }
 
         let targetBatchId = defaultBatchId;
+        let targetBatchName = item.batch_name || '';
         if (item.batch_name) {
-          const existingBatch = await queryGet('SELECT id FROM batches WHERE name = ? COLLATE NOCASE', [item.batch_name.trim()]);
+          const existingBatch = await queryGet('SELECT id, name FROM batches WHERE name = ? COLLATE NOCASE', [item.batch_name.trim()]);
           if (existingBatch) {
             targetBatchId = existingBatch.id;
+            targetBatchName = existingBatch.name;
           } else {
             const newB = await executeRun('INSERT INTO batches (name, default_fee) VALUES (?, ?)', [item.batch_name.trim(), Number(item.total_fee) || 50000]);
             targetBatchId = newB.lastInsertRowid;
+            targetBatchName = item.batch_name.trim();
           }
+        } else if (!targetBatchName && targetBatchId) {
+          const tb = await queryGet('SELECT name FROM batches WHERE id = ?', [Number(targetBatchId)]);
+          targetBatchName = tb ? tb.name : '';
         }
 
+        const formattedRoll = formatStudentRollNo(item.roll_no, targetBatchName);
+
         const existingStudent = await queryGet('SELECT id, total_fee, fees_paid FROM students WHERE roll_no = ? AND batch_id = ?', [
-          item.roll_no.toString().trim(),
+          formattedRoll,
           Number(targetBatchId)
         ]);
         const totalFee = Number(item.total_fee) || 0;
@@ -512,10 +559,11 @@ function initDb(dbFilePath) {
         if (existingStudent) {
           await executeRun(`
             UPDATE students SET
-              name = ?, batch_id = ?, parent_name = ?, parent_phone = ?, total_fee = ?, fees_paid = ?, updated_at = CURRENT_TIMESTAMP
+              name = ?, roll_no = ?, batch_id = ?, parent_name = ?, parent_phone = ?, total_fee = ?, fees_paid = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
           `, [
             item.name.trim(),
+            formattedRoll,
             Number(targetBatchId),
             item.parent_name || '',
             item.parent_phone || item.phone || '',
@@ -529,7 +577,7 @@ function initDb(dbFilePath) {
             INSERT INTO students (roll_no, name, batch_id, parent_name, parent_phone, student_phone, email, total_fee, fees_paid, notes)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `, [
-            item.roll_no.toString().trim(),
+            formattedRoll,
             item.name.trim(),
             Number(targetBatchId),
             item.parent_name || '',

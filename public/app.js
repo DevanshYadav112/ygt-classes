@@ -793,22 +793,30 @@ async function loadPendingFees() {
         runningSum += s.pending_fee;
 
         return `
-          <tr>
-            <td class="cell-roll">${escapeHtml(s.roll_no)}</td>
-            <td>
-              <span class="cell-student-name">${escapeHtml(s.name)}</span>
-              <div class="text-xs text-muted">Parent: ${escapeHtml(s.parent_name || 'N/A')}</div>
+          <tr class="fee-student-row" data-student-id="${s.id}">
+            <td class="cell-roll-wrap">
+              <span class="roll-badge-chip">${escapeHtml(s.roll_no || '—')}</span>
             </td>
-            <td><span class="batch-tag">${escapeHtml(s.batch_code || s.batch_name)}</span></td>
-            <td>${formatCurrency(s.total_fee)}</td>
-            <td class="cell-paid-amt">${formatCurrency(s.fees_paid)}</td>
-            <td class="cell-pending-amt">${formatCurrency(s.pending_fee)}</td>
             <td>
-              <div style="display:flex; gap:0.4rem;">
-                <button class="btn-table-action collect-fee" onclick="openFeeModalForStudent(${s.id})">
-                  + Collect Fee
+              <div class="student-name-block">
+                <span class="cell-student-name">${escapeHtml(s.name)}</span>
+                <div class="student-parent-sub">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  <span>Parent: ${escapeHtml(s.parent_name || 'N/A')}</span>
+                </div>
+              </div>
+            </td>
+            <td><span class="batch-pill-chip">${escapeHtml(s.batch_code || s.batch_name)}</span></td>
+            <td><span class="fee-amt-pill total">${formatCurrency(s.total_fee)}</span></td>
+            <td><span class="fee-amt-pill paid">${formatCurrency(s.fees_paid)}</span></td>
+            <td><span class="fee-amt-pill pending-due"><span class="status-pulse-dot red"></span>Due ${formatCurrency(s.pending_fee)}</span></td>
+            <td>
+              <div class="table-actions-cluster">
+                <button class="btn-action-pill collect" onclick="openFeeModalForStudent(${s.id})">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Collect Fee
                 </button>
-                <button class="btn-table-action" onclick="openStudentModal(${s.id})">
+                <button class="btn-action-pill profile" onclick="openStudentModal(${s.id})">
                   Profile
                 </button>
               </div>
@@ -972,31 +980,48 @@ function renderStudentsTable() {
       const hasPending = s.pending_fee > 0;
 
       return `
-        <tr>
-          <td class="cell-roll">${escapeHtml(s.roll_no)}</td>
-          <td>
-            <span class="cell-student-name">${escapeHtml(s.name)}</span>
-            <div class="text-xs text-muted">Parent: ${escapeHtml(s.parent_name || 'N/A')}</div>
+        <tr class="student-directory-row" data-student-id="${s.id}">
+          <td class="cell-roll-wrap">
+            <span class="roll-badge-chip">${escapeHtml(s.roll_no || '—')}</span>
           </td>
-          <td><span class="batch-tag">${escapeHtml(s.batch_code || s.batch_name)}</span></td>
           <td>
-            <span class="phone-link">
-              ${escapeHtml(s.parent_phone)}
-              ${cleanPhone ? `<a href="https://wa.me/91${cleanPhone}" target="_blank" class="btn-whatsapp-icon" title="Chat on WhatsApp">💬</a>` : ''}
-            </span>
+            <div class="student-name-block">
+              <span class="cell-student-name">${escapeHtml(s.name)}</span>
+              <div class="student-parent-sub">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span>Parent: ${escapeHtml(s.parent_name || 'N/A')}</span>
+              </div>
+            </div>
           </td>
-          <td>${formatCurrency(s.total_fee)}</td>
-          <td class="cell-paid-amt">${formatCurrency(s.fees_paid)}</td>
+          <td><span class="batch-pill-chip">${escapeHtml(s.batch_code || s.batch_name)}</span></td>
+          <td>
+            <div class="phone-action-wrap">
+              <span class="phone-text">${escapeHtml(s.parent_phone || 'N/A')}</span>
+              ${cleanPhone ? `
+                <a href="https://wa.me/91${cleanPhone}" target="_blank" class="btn-whatsapp-pill" title="Chat on WhatsApp">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/></svg>
+                  <span>Chat</span>
+                </a>
+              ` : ''}
+            </div>
+          </td>
+          <td><span class="fee-amt-pill total">${formatCurrency(s.total_fee)}</span></td>
+          <td><span class="fee-amt-pill paid">${formatCurrency(s.fees_paid)}</span></td>
           <td>
             ${hasPending
-              ? `<span class="badge-counter badge-danger">Pending: ${formatCurrency(s.pending_fee)}</span>`
-              : `<span class="badge-counter text-green" style="background:#ecfdf5;">Cleared ✓</span>`
+              ? `<span class="fee-status-badge pending"><span class="status-pulse-dot red"></span>Due ${formatCurrency(s.pending_fee)}</span>`
+              : `<span class="fee-status-badge cleared"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Cleared ✓</span>`
             }
           </td>
           <td>
-            <div style="display:flex; gap:0.4rem;">
-              <button class="btn-table-action" onclick="openStudentModal(${s.id})">Profile</button>
-              ${hasPending ? `<button class="btn-table-action collect-fee" onclick="openFeeModalForStudent(${s.id})">Fee</button>` : ''}
+            <div class="table-actions-cluster">
+              <button class="btn-action-pill profile" onclick="openStudentModal(${s.id})">Profile</button>
+              ${hasPending ? `
+                <button class="btn-action-pill collect" onclick="openFeeModalForStudent(${s.id})">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Pay
+                </button>
+              ` : ''}
             </div>
           </td>
         </tr>
@@ -1285,24 +1310,34 @@ function renderAttendanceTable() {
       const isAbsent = rec.status === 'Absent';
 
       return `
-        <tr class="${isAbsent ? 'row-absent-highlight' : ''}" data-student-id="${rec.student_id}">
-          <td class="cell-student-name font-medium">
-            <div class="student-name-main">${escapeHtml(rec.name)}</div>
-            ${rec.roll_no ? `<span class="student-roll-sub">Roll #${escapeHtml(rec.roll_no)}</span>` : ''}
+        <tr class="att-student-row ${isPresent ? 'row-present-highlight' : ''} ${isAbsent ? 'row-absent-highlight' : ''}" data-student-id="${rec.student_id}">
+          <td class="att-student-col">
+            <div class="att-student-info-flex">
+              <span class="roll-badge-chip att-roll-chip">${escapeHtml(rec.roll_no || '—')}</span>
+              <div class="att-name-block">
+                <span class="student-name-main">${escapeHtml(rec.name)}</span>
+                <div class="att-status-indicator ${isPresent ? 'is-present' : isAbsent ? 'is-absent' : 'is-unmarked'}">
+                  <span class="indicator-dot"></span>
+                  <span class="indicator-text">${isPresent ? 'Present' : isAbsent ? 'Absent' : 'Unmarked'}</span>
+                </div>
+              </div>
+            </div>
           </td>
-          <td style="text-align: right; width: 180px;">
-            <div class="one-tap-att-group">
+          <td class="att-actions-col">
+            <div class="one-tap-att-group neo-depth-pills">
               <button type="button" 
                       class="btn-one-tap present ${isPresent ? 'active' : ''}" 
                       onclick="toggleAttendance(${rec.student_id}, 'Present')"
                       aria-label="Mark Present">
-                <span>✓</span> Present
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Present</span>
               </button>
               <button type="button" 
                       class="btn-one-tap absent ${isAbsent ? 'active' : ''}" 
                       onclick="toggleAttendance(${rec.student_id}, 'Absent')"
                       aria-label="Mark Absent">
-                <span>✕</span> Absent
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <span>Absent</span>
               </button>
             </div>
           </td>
@@ -1330,18 +1365,28 @@ window.toggleAttendance = function(studentId, targetStatus) {
   const row = document.querySelector(`tr[data-student-id="${studentId}"]`);
   if (row) {
     row.classList.toggle('row-absent-highlight', rec.status === 'Absent');
+    row.classList.toggle('row-present-highlight', rec.status === 'Present');
     const btnPresent = row.querySelector('.btn-one-tap.present');
     const btnAbsent = row.querySelector('.btn-one-tap.absent');
     if (btnPresent) btnPresent.classList.toggle('active', rec.status === 'Present');
     if (btnAbsent) btnAbsent.classList.toggle('active', rec.status === 'Absent');
+
+    const indicator = row.querySelector('.att-status-indicator');
+    if (indicator) {
+      indicator.className = `att-status-indicator ${rec.status === 'Present' ? 'is-present' : rec.status === 'Absent' ? 'is-absent' : 'is-unmarked'}`;
+      const text = indicator.querySelector('.indicator-text');
+      if (text) {
+        text.textContent = rec.status === 'Present' ? 'Present' : rec.status === 'Absent' ? 'Absent' : 'Unmarked';
+      }
+    }
   }
 
   if (state.attendanceFilter !== 'ALL') {
     renderAttendanceTable();
+  } else {
+    updateAttendanceStats();
   }
-
   checkAttendanceChanges();
-  updateAttendanceStats();
 };
 
 function checkAttendanceChanges() {
@@ -2053,8 +2098,49 @@ document.getElementById('btnDirectoryAddStudent').addEventListener('click', () =
 document.getElementById('btnCreateNewBatch').addEventListener('click', () => openModal('batchModal'));
 document.getElementById('openSideLogSummaryBtn')?.addEventListener('click', () => switchView('activity-log'));
 
-// Top Right Profile Avatar click -> Opens Profile & Settings Modal
-elements.staffProfileBtn.addEventListener('click', () => openUserProfileModal());
+// Top Right Profile Avatar:
+// Short Click/Tap -> Opens User Profile & Settings Modal
+// Long Press/Hold (480ms) -> Opens Switch Staff Modal
+let staffHoldTimer = null;
+let isStaffHold = false;
+let staffPressStartTime = 0;
+
+if (elements.staffProfileBtn) {
+  const startStaffHold = (e) => {
+    isStaffHold = false;
+    staffPressStartTime = Date.now();
+    elements.staffProfileBtn.classList.add('holding');
+    staffHoldTimer = setTimeout(() => {
+      isStaffHold = true;
+      elements.staffProfileBtn.classList.remove('holding');
+      elements.staffProfileBtn.classList.add('hold-activated');
+      setTimeout(() => elements.staffProfileBtn.classList.remove('hold-activated'), 300);
+      if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
+      showToast('🔄 Switching Staff Member', 'info');
+      openStaffModal();
+    }, 480);
+  };
+
+  const endStaffHold = (e) => {
+    elements.staffProfileBtn.classList.remove('holding');
+    if (staffHoldTimer) {
+      clearTimeout(staffHoldTimer);
+      staffHoldTimer = null;
+    }
+  };
+
+  elements.staffProfileBtn.addEventListener('pointerdown', startStaffHold);
+  elements.staffProfileBtn.addEventListener('pointerup', (e) => {
+    const elapsed = Date.now() - staffPressStartTime;
+    endStaffHold(e);
+    if (!isStaffHold && elapsed < 480) {
+      openUserProfileModal();
+    }
+  });
+  elements.staffProfileBtn.addEventListener('pointercancel', endStaffHold);
+  elements.staffProfileBtn.addEventListener('pointerleave', endStaffHold);
+  elements.staffProfileBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+}
 
 // Floating Bottom Navigation Dock Click Handlers
 document.querySelectorAll('.bottom-nav-item').forEach(btn => {

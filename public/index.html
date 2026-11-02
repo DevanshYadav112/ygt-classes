@@ -406,49 +406,118 @@
     </div>
 
     <div class="drawer-content">
-      <div class="drawer-section-title">⚡ QUICK ACTIONS & MANAGEMENT</div>
+      <div class="drawer-section-title">QUICK ACTIONS & NAVIGATION</div>
       <ul class="drawer-links">
+        <!-- 1. All Students -->
         <li>
-          <button class="drawer-action-btn primary" id="drawerUploadBtn" type="button">
-            <span>📥</span> Upload Batch Excel (.xlsx / .csv)
-          </button>
-        </li>
-        <li>
-          <button class="drawer-action-btn" id="drawerDownloadTemplateBtn" type="button">
-            <span>📄</span> Download Excel Template
-          </button>
-        </li>
-        <li>
-          <button class="drawer-action-btn" id="drawerAddStudentBtn" type="button">
-            <span>➕</span> Enroll New Student
-          </button>
-        </li>
-        <li>
-          <button class="drawer-action-btn" id="drawerAddBatchBtn" type="button">
-            <span>🏛️</span> Create New Batch
-          </button>
-        </li>
-        <li>
-          <a href="#" class="drawer-link" data-view="students">
-            <div class="drawer-link-left">
-              <span class="drawer-icon">👥</span> 
-              <span>All Students Directory</span>
+          <a href="#" class="drawer-unified-btn drawer-link" data-view="students">
+            <div class="drawer-btn-left">
+              <span class="drawer-btn-icon-wrap">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              </span>
+              <span class="drawer-btn-label">All Students</span>
             </div>
-            <span class="badge-counter drawer-badge" id="drawerBadgeStudents">0</span>
+            <span class="drawer-btn-badge" id="drawerBadgeStudents">0</span>
           </a>
         </li>
+
+        <!-- 2. Enroll New Student -->
         <li>
-          <a href="#" class="drawer-link" data-view="activity-log">
-            <div class="drawer-link-left">
-              <span class="drawer-icon">⚡</span> 
-              <span>Live Activity Log</span>
+          <button class="drawer-unified-btn" id="drawerAddStudentBtn" type="button">
+            <div class="drawer-btn-left">
+              <span class="drawer-btn-icon-wrap">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="8.5" cy="7" r="4"/>
+                  <line x1="20" y1="8" x2="20" y2="14"/>
+                  <line x1="23" y1="11" x2="17" y2="11"/>
+                </svg>
+              </span>
+              <span class="drawer-btn-label">Enroll New Student</span>
             </div>
-            <span class="badge-counter badge-blue drawer-badge" id="drawerBadgeLogs">0</span>
+          </button>
+        </li>
+
+        <!-- 3. Create a New Batch -->
+        <li>
+          <button class="drawer-unified-btn" id="drawerAddBatchBtn" type="button">
+            <div class="drawer-btn-left">
+              <span class="drawer-btn-icon-wrap">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                  <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                </svg>
+              </span>
+              <span class="drawer-btn-label">Create a New Batch</span>
+            </div>
+          </button>
+        </li>
+
+        <!-- 4. Upload Batch Excel -->
+        <li>
+          <button class="drawer-unified-btn" id="drawerUploadBtn" type="button">
+            <div class="drawer-btn-left">
+              <span class="drawer-btn-icon-wrap">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+              </span>
+              <span class="drawer-btn-label">Upload Batch Excel</span>
+            </div>
+          </button>
+        </li>
+
+        <!-- 5. Download Excel Template -->
+        <li>
+          <button class="drawer-unified-btn" id="drawerDownloadTemplateBtn" type="button">
+            <div class="drawer-btn-left">
+              <span class="drawer-btn-icon-wrap">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </span>
+              <span class="drawer-btn-label">Download Excel Template</span>
+            </div>
+          </button>
+        </li>
+
+        <!-- 6. Live Activity Log -->
+        <li>
+          <a href="#" class="drawer-unified-btn drawer-link" data-view="activity-log">
+            <div class="drawer-btn-left">
+              <span class="drawer-btn-icon-wrap">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+              </span>
+              <span class="drawer-btn-label">Live Activity Log</span>
+            </div>
+            <span class="drawer-btn-badge" id="drawerBadgeLogs">0</span>
           </a>
         </li>
+
+        <!-- 7. Switch Staff -->
         <li>
-          <button class="drawer-action-btn" id="drawerOpenStaffBtn" type="button">
-            <span>🔄</span> Switch Staff
+          <button class="drawer-unified-btn" id="drawerOpenStaffBtn" type="button">
+            <div class="drawer-btn-left">
+              <span class="drawer-btn-icon-wrap">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <polyline points="1 20 1 14 7 14"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+              </span>
+              <span class="drawer-btn-label">Switch Staff</span>
+            </div>
           </button>
         </li>
       </ul>
@@ -987,8 +1056,8 @@
                 <input type="text" id="editStudentName" class="form-input" required>
               </div>
               <div class="form-group flex-1">
-                <label for="editRollNo">Roll Number / Reg No: *</label>
-                <input type="text" id="editRollNo" class="form-input" required>
+                <label for="editRollNo">Roll Number (e.g. X1, IX2, V3): *</label>
+                <input type="text" id="editRollNo" class="form-input" placeholder="e.g. X3, IX1, V2" required>
               </div>
             </div>
 

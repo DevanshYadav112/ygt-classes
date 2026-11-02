@@ -3352,3 +3352,563 @@ body[data-theme="dark"] .btn-att-cancel:hover {
   transform: scale(0.96);
   box-shadow: 0 2px 8px rgba(0, 113, 227, 0.35), inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
+
+/* ==========================================================
+   UNIFIED DRAWER ACTION BUTTONS WITH NEOMORPHIC DEPTH EFFECT
+   ========================================================== */
+.drawer-unified-btn {
+  width: 100%;
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.72rem 0.95rem;
+  margin-bottom: 0.45rem;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  text-decoration: none;
+  font-family: inherit;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.drawer-unified-btn:hover {
+  transform: translateY(-1.5px);
+  border-color: rgba(0, 113, 227, 0.4);
+  box-shadow: 0 6px 14px rgba(0, 113, 227, 0.12), 0 2px 4px rgba(15, 23, 42, 0.06);
+  background: linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%);
+}
+
+.drawer-unified-btn:active {
+  transform: translateY(1px) scale(0.985);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.drawer-unified-btn.active {
+  border-color: rgba(0, 113, 227, 0.55);
+  background: linear-gradient(180deg, #EFF6FF 0%, #DBEAFE 100%);
+  box-shadow: 0 2px 6px rgba(0, 113, 227, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.drawer-btn-left {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.drawer-btn-icon-wrap {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(0, 113, 227, 0.12) 0%, rgba(94, 92, 230, 0.10) 100%);
+  color: #0071E3;
+  border: 1px solid rgba(0, 113, 227, 0.18);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.7), 0 1px 3px rgba(0, 113, 227, 0.08);
+  transition: transform 0.18s ease;
+}
+
+.drawer-unified-btn:hover .drawer-btn-icon-wrap {
+  transform: scale(1.06);
+}
+
+.drawer-btn-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.drawer-btn-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(0, 113, 227, 0.1);
+  color: #0071E3;
+  border: 1px solid rgba(0, 113, 227, 0.22);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Dark mode drawer button */
+body[data-theme="dark"] .drawer-unified-btn {
+  background: linear-gradient(180deg, #1E293B 0%, #172234 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+body[data-theme="dark"] .drawer-unified-btn:hover {
+  background: linear-gradient(180deg, #243247 0%, #1A273A 100%);
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+
+body[data-theme="dark"] .drawer-unified-btn.active {
+  background: linear-gradient(180deg, #1E3A8A 0%, #172554 100%);
+  border-color: rgba(96, 165, 250, 0.5);
+}
+
+body[data-theme="dark"] .drawer-btn-icon-wrap {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.16) 0%, rgba(99, 102, 241, 0.14) 100%);
+  color: #38BDF8;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1), 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+body[data-theme="dark"] .drawer-btn-badge {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38BDF8;
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+/* ==========================================================
+   TOP RIGHT PROFILE AVATAR HOLD TO SWITCH STAFF
+   ========================================================== */
+#staffProfileBtn {
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
+#staffProfileBtn.holding .avatar-circle {
+  transform: scale(0.92);
+  animation: holdPulse 0.45s infinite alternate ease-in-out;
+}
+
+#staffProfileBtn.hold-activated .avatar-circle {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 10px rgba(0, 113, 227, 0);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+@keyframes holdPulse {
+  0% {
+    box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 7px rgba(0, 113, 227, 0.8);
+  }
+}
+
+/* ==========================================================
+   STUDENT LISTS VISUAL UPGRADES (ALL STUDENTS, ATTENDANCE, FEES)
+   ========================================================== */
+
+/* Modern Roman Roll Badges */
+.roll-badge-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 28px;
+  padding: 0 0.55rem;
+  border-radius: 8px;
+  font-family: var(--font-mono, 'SF Mono', Consolas, monospace);
+  font-weight: 700;
+  font-size: 0.84rem;
+  letter-spacing: 0.03em;
+  background: linear-gradient(180deg, #F8FAFC 0%, #E2E8F0 100%);
+  color: #1E293B;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.att-roll-chip {
+  min-width: 48px;
+  height: 32px;
+  font-size: 0.88rem;
+}
+
+body[data-theme="dark"] .roll-badge-chip {
+  background: linear-gradient(180deg, #334155 0%, #1E293B 100%);
+  color: #F8FAFC;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Student & Parent Info */
+.student-name-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.cell-student-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.92rem;
+}
+
+.student-parent-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+}
+
+/* Batch Pill Chip */
+.batch-pill-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  background: rgba(94, 92, 230, 0.09);
+  color: #5E5CE6;
+  border: 1px solid rgba(94, 92, 230, 0.25);
+  white-space: nowrap;
+}
+
+body[data-theme="dark"] .batch-pill-chip {
+  background: rgba(94, 92, 230, 0.18);
+  color: #A78BFA;
+  border-color: rgba(167, 139, 250, 0.35);
+}
+
+/* Phone & WhatsApp Action */
+.phone-action-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.phone-text {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.btn-whatsapp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 24px;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-decoration: none;
+  background: #E8F8EE;
+  color: #1B873F;
+  border: 1px solid rgba(37, 211, 102, 0.3);
+  box-shadow: 0 1px 2px rgba(27, 135, 63, 0.1);
+  transition: all 0.15s ease;
+}
+
+.btn-whatsapp-pill:hover {
+  background: #25D366;
+  color: #FFFFFF;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(37, 211, 102, 0.35);
+}
+
+/* Amount Pills */
+.fee-amt-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.22rem 0.6rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.84rem;
+  font-family: var(--font-mono, monospace);
+  white-space: nowrap;
+}
+
+.fee-amt-pill.total {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+}
+
+.fee-amt-pill.paid {
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.fee-amt-pill.pending-due {
+  background: #FEF2F2;
+  color: #B91C1C;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  font-weight: 700;
+}
+
+body[data-theme="dark"] .fee-amt-pill.paid {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+body[data-theme="dark"] .fee-amt-pill.pending-due {
+  background: rgba(239, 68, 68, 0.15);
+  color: #F87171;
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+/* Fee Status Badges */
+.fee-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fee-status-badge.cleared {
+  background: #ECFDF5;
+  color: #065F46;
+  border: 1px solid rgba(5, 150, 105, 0.25);
+  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.1);
+}
+
+.fee-status-badge.pending {
+  background: #FEF2F2;
+  color: #991B1B;
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
+}
+
+body[data-theme="dark"] .fee-status-badge.cleared {
+  background: rgba(5, 150, 105, 0.18);
+  color: #34D399;
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+body[data-theme="dark"] .fee-status-badge.pending {
+  background: rgba(220, 38, 38, 0.18);
+  color: #F87171;
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.status-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #EF4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
+  animation: pulseDot 1.6s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.8; }
+}
+
+/* Action Cluster & Pills */
+.table-actions-cluster {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.btn-action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: 30px;
+  padding: 0 0.72rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.16s ease;
+  user-select: none;
+}
+
+.btn-action-pill.profile {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.btn-action-pill.profile:hover {
+  background: var(--border-subtle);
+  transform: translateY(-1px);
+}
+
+.btn-action-pill.collect {
+  background: linear-gradient(135deg, #0071E3 0%, #0056b3 100%);
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(0, 113, 227, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.btn-action-pill.collect:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 113, 227, 0.4);
+}
+
+.btn-action-pill.collect:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Table Card Rows */
+.student-directory-row,
+.fee-student-row {
+  transition: background-color 0.15s ease;
+}
+
+.student-directory-row:hover,
+.fee-student-row:hover {
+  background-color: var(--bg-secondary) !important;
+}
+
+/* Attendance Student Row & Cells */
+.att-student-row {
+  transition: background-color 0.18s ease;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.att-student-col {
+  padding: 0.85rem 1rem;
+}
+
+.att-actions-col {
+  padding: 0.85rem 1rem;
+  text-align: right;
+  width: 200px;
+}
+
+.att-student-info-flex {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.att-name-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  text-align: left;
+}
+
+.student-name-main {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.att-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.att-status-indicator .indicator-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.att-status-indicator.is-present {
+  color: #059669;
+}
+.att-status-indicator.is-present .indicator-dot {
+  background: #10B981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+}
+
+.att-status-indicator.is-absent {
+  color: #DC2626;
+}
+.att-status-indicator.is-absent .indicator-dot {
+  background: #EF4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
+}
+
+.att-status-indicator.is-unmarked {
+  color: var(--text-tertiary);
+}
+.att-status-indicator.is-unmarked .indicator-dot {
+  background: var(--text-tertiary);
+  opacity: 0.5;
+}
+
+/* Attendance Row Status Tint */
+.att-student-row.row-present-highlight {
+  background-color: rgba(16, 185, 129, 0.05) !important;
+}
+
+.att-student-row.row-absent-highlight {
+  background-color: rgba(239, 68, 68, 0.06) !important;
+}
+
+/* Attendance Neo-Depth Pills */
+.neo-depth-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--bg-secondary);
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.neo-depth-pills .btn-one-tap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  height: 34px;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.16s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.neo-depth-pills .btn-one-tap:hover:not(.active) {
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+body[data-theme="dark"] .neo-depth-pills .btn-one-tap:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.neo-depth-pills .btn-one-tap.present.active {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 3px 8px rgba(16, 185, 129, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  font-weight: 700;
+  transform: scale(1.02);
+}
+
+.neo-depth-pills .btn-one-tap.absent.active {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 3px 8px rgba(239, 68, 68, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  font-weight: 700;
+  transform: scale(1.02);
+}
