@@ -397,7 +397,10 @@ const server = http.createServer(async (req, res) => {
         target: {
           namespace: "android_app",
           package_name: "com.ygtclasses.portal",
-          sha256_cert_fingerprints: ["9A:BD:E5:19:7B:0B:D6:20:27:38:D9:E3:9D:CC:C5:1C:81:36:9B:AA:39:77:01:56:A1:3E:62:76:C6:60:E1:54"]
+          sha256_cert_fingerprints: [
+            "8C:95:23:7A:CA:EC:B9:0C:AC:EA:14:44:4E:D0:43:6A:F3:DC:23:24:46:C1:CB:8D:11:0B:18:07:DF:85:22:5A",
+            "9A:BD:E5:19:7B:0B:D6:20:27:38:D9:E3:9D:CC:C5:1C:81:36:9B:AA:39:77:01:56:A1:3E:62:76:C6:60:E1:54"
+          ]
         }
       }]));
     }
