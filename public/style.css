@@ -3899,6 +3899,11 @@ body[data-theme="dark"] .fee-status-badge.pending {
   transition: all 0.16s ease;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.neo-depth-pills .btn-one-tap * {
+  pointer-events: none !important;
 }
 
 .neo-depth-pills .btn-one-tap:hover:not(.active) {

@@ -1362,7 +1362,8 @@ function renderAttendanceTable() {
 
 // Instant One-Tap Toggle with neutral unmark support
 window.toggleAttendance = function(studentId, targetStatus) {
-  const rec = state.attendanceRecords.find(r => Number(r.student_id) === Number(studentId));
+  const numId = Number(studentId);
+  const rec = state.attendanceRecords.find(r => Number(r.student_id) === numId || String(r.student_id) === String(studentId));
   if (!rec) return;
 
   // Toggle: If clicking same status, unmark; otherwise set targetStatus
@@ -1373,14 +1374,26 @@ window.toggleAttendance = function(studentId, targetStatus) {
   }
 
   // Update row buttons directly
-  const row = document.querySelector(`tr[data-student-id="${studentId}"]`);
+  const row = document.querySelector(`tr[data-student-id="${studentId}"], tr[data-student-id="${numId}"]`);
   if (row) {
     row.classList.toggle('row-absent-highlight', rec.status === 'Absent');
     row.classList.toggle('row-present-highlight', rec.status === 'Present');
     const btnPresent = row.querySelector('.btn-one-tap.present');
     const btnAbsent = row.querySelector('.btn-one-tap.absent');
-    if (btnPresent) btnPresent.classList.toggle('active', rec.status === 'Present');
-    if (btnAbsent) btnAbsent.classList.toggle('active', rec.status === 'Absent');
+    if (btnPresent) {
+      if (rec.status === 'Present') {
+        btnPresent.classList.add('active');
+      } else {
+        btnPresent.classList.remove('active');
+      }
+    }
+    if (btnAbsent) {
+      if (rec.status === 'Absent') {
+        btnAbsent.classList.add('active');
+      } else {
+        btnAbsent.classList.remove('active');
+      }
+    }
 
     const indicator = row.querySelector('.att-status-indicator');
     if (indicator) {
