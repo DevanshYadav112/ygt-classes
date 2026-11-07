@@ -3903,9 +3903,7 @@ body[data-theme="dark"] .fee-status-badge.pending {
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 600;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
+  border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.16s ease;
   user-select: none;
@@ -3917,27 +3915,68 @@ body[data-theme="dark"] .fee-status-badge.pending {
   pointer-events: none !important;
 }
 
-.neo-depth-pills .btn-one-tap:hover:not(.active) {
-  color: var(--text-primary);
-  background: rgba(0, 0, 0, 0.04);
+/* Present Pill - Elegant Soft Emerald Tint when unselected */
+.neo-depth-pills .btn-one-tap.present {
+  background: rgba(16, 185, 129, 0.08);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.22);
 }
 
-body[data-theme="dark"] .neo-depth-pills .btn-one-tap:hover:not(.active) {
-  background: rgba(255, 255, 255, 0.06);
+.neo-depth-pills .btn-one-tap.present:hover:not(.active),
+.neo-depth-pills .btn-one-tap.present:active:not(.active) {
+  background: rgba(16, 185, 129, 0.16);
+  color: #047857;
 }
 
+body[data-theme="dark"] .neo-depth-pills .btn-one-tap.present {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34D399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+body[data-theme="dark"] .neo-depth-pills .btn-one-tap.present:hover:not(.active) {
+  background: rgba(16, 185, 129, 0.22);
+}
+
+/* Present Pill - Vivid Glowing Gradient Fill when Active */
 .neo-depth-pills .btn-one-tap.present.active {
   background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
   color: #FFFFFF !important;
-  box-shadow: 0 3px 8px rgba(16, 185, 129, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  border-color: #059669 !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
   font-weight: 700;
-  transform: scale(1.02);
+  transform: scale(1.04);
 }
 
+/* Absent Pill - Elegant Soft Rose Tint when unselected */
+.neo-depth-pills .btn-one-tap.absent {
+  background: rgba(239, 68, 68, 0.08);
+  color: #DC2626;
+  border: 1px solid rgba(239, 68, 68, 0.22);
+}
+
+.neo-depth-pills .btn-one-tap.absent:hover:not(.active),
+.neo-depth-pills .btn-one-tap.absent:active:not(.active) {
+  background: rgba(239, 68, 68, 0.16);
+  color: #B91C1C;
+}
+
+body[data-theme="dark"] .neo-depth-pills .btn-one-tap.absent {
+  background: rgba(239, 68, 68, 0.12);
+  color: #F87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+body[data-theme="dark"] .neo-depth-pills .btn-one-tap.absent:hover:not(.active) {
+  background: rgba(239, 68, 68, 0.22);
+}
+
+/* Absent Pill - Vivid Glowing Gradient Fill when Active */
 .neo-depth-pills .btn-one-tap.absent.active {
   background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important;
   color: #FFFFFF !important;
-  box-shadow: 0 3px 8px rgba(239, 68, 68, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  border-color: #DC2626 !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
   font-weight: 700;
-  transform: scale(1.02);
+  transform: scale(1.04);
 }

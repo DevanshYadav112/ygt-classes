@@ -1341,14 +1341,14 @@ function renderAttendanceTable() {
             <div class="one-tap-att-group neo-depth-pills">
               <button type="button" 
                       class="btn-one-tap present ${isPresent ? 'active' : ''}" 
-                      onclick="toggleAttendance(${rec.student_id}, 'Present')"
+                      onclick="toggleAttendance('${rec.student_id}', 'Present')"
                       aria-label="Mark Present">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 <span>Present</span>
               </button>
               <button type="button" 
                       class="btn-one-tap absent ${isAbsent ? 'active' : ''}" 
-                      onclick="toggleAttendance(${rec.student_id}, 'Absent')"
+                      onclick="toggleAttendance('${rec.student_id}', 'Absent')"
                       aria-label="Mark Absent">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 <span>Absent</span>
@@ -1363,7 +1363,7 @@ function renderAttendanceTable() {
   updateAttendanceStats();
 }
 
-// Instant One-Tap Toggle with neutral unmark support
+// Instant One-Tap Toggle with neutral unmark support & zero lag
 window.toggleAttendance = function(studentId, targetStatus) {
   const numId = Number(studentId);
   const rec = state.attendanceRecords.find(r => Number(r.student_id) === numId || String(r.student_id) === String(studentId));
@@ -1376,7 +1376,7 @@ window.toggleAttendance = function(studentId, targetStatus) {
     rec.status = targetStatus;
   }
 
-  // Update row buttons directly
+  // Update row buttons directly in DOM
   const row = document.querySelector(`tr[data-student-id="${studentId}"], tr[data-student-id="${numId}"]`);
   if (row) {
     row.classList.toggle('row-absent-highlight', rec.status === 'Absent');
@@ -1384,18 +1384,10 @@ window.toggleAttendance = function(studentId, targetStatus) {
     const btnPresent = row.querySelector('.btn-one-tap.present');
     const btnAbsent = row.querySelector('.btn-one-tap.absent');
     if (btnPresent) {
-      if (rec.status === 'Present') {
-        btnPresent.classList.add('active');
-      } else {
-        btnPresent.classList.remove('active');
-      }
+      btnPresent.classList.toggle('active', rec.status === 'Present');
     }
     if (btnAbsent) {
-      if (rec.status === 'Absent') {
-        btnAbsent.classList.add('active');
-      } else {
-        btnAbsent.classList.remove('active');
-      }
+      btnAbsent.classList.toggle('active', rec.status === 'Absent');
     }
 
     const indicator = row.querySelector('.att-status-indicator');
@@ -1406,6 +1398,8 @@ window.toggleAttendance = function(studentId, targetStatus) {
         text.textContent = rec.status === 'Present' ? 'Present' : rec.status === 'Absent' ? 'Absent' : 'Unmarked';
       }
     }
+  } else {
+    renderAttendanceTable();
   }
 
   if (state.attendanceFilter !== 'ALL') {
@@ -2577,6 +2571,25 @@ function formatTimeAgo(isoStr) {
     minute: '2-digit',
     hour12: true
   }).toUpperCase();
+
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  const logDateKey = formatter.format(date);
+
+  const now = new Date();
+  const todayKey = formatter.format(now);
+  const yesterdayKey = formatter.format(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+
+  if (logDateKey === todayKey) {
+    return `${timePart} • Today`;
+  }
+  if (logDateKey === yesterdayKey) {
+    return `${timePart} • Yesterday`;
+  }
 
   const dayPart = date.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short' });
   const datePart = date.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' }).replace(/,/g, '');
