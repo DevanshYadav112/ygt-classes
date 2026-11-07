@@ -633,14 +633,10 @@
 
       <!-- Detailed Module Views Section (Hidden on Home, Accessed via 3-Lines Menu or Card Jumps) -->
       <section class="main-tabs-section" id="mainTabsSection" style="display: none;">
-        <!-- Top Back Navigation Header for Active Sub-View -->
-        <div class="active-view-header" id="activeViewHeader">
-          <button type="button" class="btn-back-home" id="btnBackToHome" title="Return to Home">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
-            <span>Home</span>
-          </button>
+        <!-- Centered Active Sub-View Title Header with Neomorphic Depth -->
+        <div class="active-view-header centered-depth-header" id="activeViewHeader">
           <div class="active-view-title-wrap">
-            <h2 class="active-view-title" id="activeViewTitle">💰 Fees</h2>
+            <h2 class="active-view-title" id="activeViewTitle">Fees</h2>
           </div>
         </div>
 
@@ -755,8 +751,8 @@
         <div class="tab-pane" id="tab-attendance">
           <div class="attendance-module-container">
 
-            <!-- 1. Live Count Summary Card (Top of Screen) -->
-            <div class="attendance-summary-card" id="attendanceSummaryCard">
+            <!-- 1. Live Count Summary Card (Hidden by default when no batch is selected) -->
+            <div class="attendance-summary-card" id="attendanceSummaryCard" style="display: none;">
               <div class="att-metric-box">
                 <span class="att-metric-label">Total Enrolled</span>
                 <span class="att-metric-value" id="attTotalEnrolled">0</span>
@@ -775,7 +771,7 @@
               </div>
             </div>
 
-            <!-- 2. Teacher Control Bar (Batch + Date + Today Shortcut) -->
+            <!-- 2. Teacher Control Bar (Batch + Date + Today Shortcut + 3-Dots Bulk Menu) -->
             <div class="attendance-control-card">
               <div class="att-control-grid">
                 <div class="att-form-field">
@@ -787,36 +783,26 @@
                   <div class="date-with-shortcut">
                     <input type="date" id="attendanceDatePicker" class="form-input">
                     <button type="button" class="btn btn-sm btn-outline btn-today-shortcut" id="btnAttendanceSetToday">Today</button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Status Banner: Saved status or unsaved warning -->
-              <div class="attendance-date-banner" id="attendanceDateBanner">
-                <span class="status-indicator-dot" id="attStatusDot"></span>
-                <span id="attStatusText">Loading attendance records...</span>
-              </div>
-
-              <!-- Quick Action Buttons: 3-Dots Bulk Menu on Left, Edit Button on Right -->
-              <div class="attendance-action-toolbar">
-                <div class="att-left-actions">
-                  <div class="card-dots-menu-wrap">
-                    <button type="button" class="btn-dots-menu" id="btnAttDotsMenu" onclick="toggleAttMenu(event)" title="Bulk Attendance Options">⋮</button>
-                    <div class="dots-dropdown-menu" id="attDotsDropdown" style="left: 0; right: auto;">
-                      <button type="button" class="dots-menu-item text-success" id="btnMarkAllPresent">
-                        <span>✓</span> Mark All Present
-                      </button>
-                      <button type="button" class="dots-menu-item text-danger" id="btnMarkAllAbsent">
-                        <span>✕</span> Mark All Absent
-                      </button>
+                    <!-- 3-Dots Bulk Actions Menu shifted next to Today button (Visible only when batch is selected) -->
+                    <div class="card-dots-menu-wrap" id="attDotsMenuWrap" style="display: none;">
+                      <button type="button" class="btn-dots-menu" id="btnAttDotsMenu" onclick="toggleAttMenu(event)" title="Bulk Attendance Options">⋮</button>
+                      <div class="dots-dropdown-menu" id="attDotsDropdown" style="right: 0; left: auto;">
+                        <button type="button" class="dots-menu-item text-success" id="btnMarkAllPresent">
+                          <span>✓</span> Mark All Present
+                        </button>
+                        <button type="button" class="dots-menu-item text-danger" id="btnMarkAllAbsent">
+                          <span>✕</span> Mark All Absent
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div class="att-right-actions">
-                  <button type="button" class="btn btn-sm btn-outline" id="btnEditAttendance" title="Edit this day's attendance" style="display: none;">
-                    ✏️ Edit Attendance
-                  </button>
-                </div>
+              </div>
+
+              <!-- Status Banner: Saved status or unsaved warning (Hidden when no batch selected) -->
+              <div class="attendance-date-banner" id="attendanceDateBanner" style="display: none;">
+                <span class="status-indicator-dot" id="attStatusDot"></span>
+                <span id="attStatusText">Attendance status</span>
               </div>
 
               <!-- Filter Tabs & Quick Search -->

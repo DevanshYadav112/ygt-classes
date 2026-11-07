@@ -800,10 +800,11 @@ async function loadPendingFees() {
             <td>
               <div class="student-name-block">
                 <span class="cell-student-name">${escapeHtml(s.name)}</span>
-                <div class="student-parent-sub">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  <span>Parent: ${escapeHtml(s.parent_name || 'N/A')}</span>
-                </div>
+                ${s.parent_name && s.parent_name !== 'N/A' ? `
+                  <div class="student-parent-sub">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <span>Parent: ${escapeHtml(s.parent_name)}</span>
+                  </div>` : ''}
               </div>
             </td>
             <td><span class="batch-pill-chip">${escapeHtml(s.batch_code || s.batch_name)}</span></td>
@@ -987,23 +988,25 @@ function renderStudentsTable() {
           <td>
             <div class="student-name-block">
               <span class="cell-student-name">${escapeHtml(s.name)}</span>
-              <div class="student-parent-sub">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                <span>Parent: ${escapeHtml(s.parent_name || 'N/A')}</span>
-              </div>
+              ${s.parent_name && s.parent_name !== 'N/A' ? `
+                <div class="student-parent-sub">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  <span>Parent: ${escapeHtml(s.parent_name)}</span>
+                </div>` : ''}
             </div>
           </td>
           <td><span class="batch-pill-chip">${escapeHtml(s.batch_code || s.batch_name)}</span></td>
           <td>
-            <div class="phone-action-wrap">
-              <span class="phone-text">${escapeHtml(s.parent_phone || 'N/A')}</span>
-              ${cleanPhone ? `
-                <a href="https://wa.me/91${cleanPhone}" target="_blank" class="btn-whatsapp-pill" title="Chat on WhatsApp">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/></svg>
-                  <span>Chat</span>
-                </a>
-              ` : ''}
-            </div>
+            ${s.parent_phone && s.parent_phone !== 'N/A' ? `
+              <div class="phone-action-wrap">
+                <span class="phone-text">${escapeHtml(s.parent_phone)}</span>
+                ${cleanPhone ? `
+                  <a href="https://wa.me/91${cleanPhone}" target="_blank" class="btn-whatsapp-pill" title="Chat on WhatsApp">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/></svg>
+                    <span>Chat</span>
+                  </a>
+                ` : ''}
+              </div>` : ''}
           </td>
           <td><span class="fee-amt-pill total">${formatCurrency(s.total_fee)}</span></td>
           <td><span class="fee-amt-pill paid">${formatCurrency(s.fees_paid)}</span></td>
@@ -1166,11 +1169,18 @@ async function loadBatchAttendance() {
   }
 
   // 1. If user has not chosen a batch, display the clean "Select Batch" view
+  const summaryCard = document.getElementById('attendanceSummaryCard');
+  const dotsWrap = document.getElementById('attDotsMenuWrap');
+
   if (!batchId) {
     state.attendanceRecords = [];
     state.attendanceOriginalRecords = [];
     state.attendanceHasRecorded = false;
     state.attendanceDirty = false;
+
+    if (summaryCard) summaryCard.style.display = 'none';
+    if (dotsWrap) dotsWrap.style.display = 'none';
+    if (elements.attendanceDateBanner) elements.attendanceDateBanner.style.display = 'none';
 
     if (elements.attendanceTableBody) {
       elements.attendanceTableBody.innerHTML = `
@@ -1189,14 +1199,15 @@ async function loadBatchAttendance() {
     if (elements.attPresentCount) elements.attPresentCount.textContent = '0';
     if (elements.attAbsentCount) elements.attAbsentCount.textContent = '0';
     if (elements.attRatePct) elements.attRatePct.textContent = '0%';
-    if (elements.attendanceDateBanner && elements.attStatusDot && elements.attStatusText) {
-      elements.attStatusDot.className = 'status-indicator-dot unsaved';
-      elements.attStatusText.textContent = `Select a coaching batch above to load student attendance sheet.`;
-    }
     if (elements.btnEditAttendance) elements.btnEditAttendance.style.display = 'none';
     hideAttendanceUnsavedBar();
     return;
   }
+
+  // Batch is selected -> show summary card, dots menu, and date banner
+  if (summaryCard) summaryCard.style.display = 'grid';
+  if (dotsWrap) dotsWrap.style.display = 'block';
+  if (elements.attendanceDateBanner) elements.attendanceDateBanner.style.display = 'flex';
 
   if (elements.attendanceTableBody) {
     elements.attendanceTableBody.innerHTML = `<tr><td colspan="2" class="text-center loading-cell">Loading student attendance for ${date}...</td></tr>`;
@@ -1351,7 +1362,7 @@ function renderAttendanceTable() {
 
 // Instant One-Tap Toggle with neutral unmark support
 window.toggleAttendance = function(studentId, targetStatus) {
-  const rec = state.attendanceRecords.find(r => r.student_id === studentId);
+  const rec = state.attendanceRecords.find(r => Number(r.student_id) === Number(studentId));
   if (!rec) return;
 
   // Toggle: If clicking same status, unmark; otherwise set targetStatus
@@ -1390,8 +1401,8 @@ window.toggleAttendance = function(studentId, targetStatus) {
 };
 
 function checkAttendanceChanges() {
-  const hasChanged = state.attendanceRecords.some((rec, idx) => {
-    const orig = state.attendanceOriginalRecords[idx];
+  const hasChanged = state.attendanceRecords.some(rec => {
+    const orig = state.attendanceOriginalRecords.find(o => Number(o.student_id) === Number(rec.student_id));
     return !orig || (rec.status || '') !== (orig.status || '');
   });
 
@@ -1951,22 +1962,22 @@ function switchTab(tabId, pushHistory = true) {
   }
 
   if (tabId === 'tab-pending-fees') {
-    if (elements.activeViewTitle) elements.activeViewTitle.textContent = '💰 Fees';
+    if (elements.activeViewTitle) elements.activeViewTitle.textContent = 'Fees';
     loadPendingFees();
   } else if (tabId === 'tab-batches') {
-    if (elements.activeViewTitle) elements.activeViewTitle.textContent = '🎓 Batch';
+    if (elements.activeViewTitle) elements.activeViewTitle.textContent = 'Batches';
     renderBatchesGrid();
   } else if (tabId === 'tab-students') {
-    if (elements.activeViewTitle) elements.activeViewTitle.textContent = '👥 All Students Directory';
+    if (elements.activeViewTitle) elements.activeViewTitle.textContent = 'All Students';
     loadAllStudents();
   } else if (tabId === 'tab-attendance') {
-    if (elements.activeViewTitle) elements.activeViewTitle.textContent = '📋 Attendance';
+    if (elements.activeViewTitle) elements.activeViewTitle.textContent = 'Attendance';
     if (elements.attendanceDatePicker && !elements.attendanceDatePicker.value) {
       elements.attendanceDatePicker.value = new Date().toISOString().slice(0, 10);
     }
     loadBatchAttendance();
   } else if (tabId === 'tab-activity-log') {
-    if (elements.activeViewTitle) elements.activeViewTitle.textContent = '⚡ Live Activity Log';
+    if (elements.activeViewTitle) elements.activeViewTitle.textContent = 'Live Activity Log';
     loadSideLogs();
   }
 
@@ -2053,7 +2064,9 @@ document.getElementById('drawerAddBatchBtn').addEventListener('click', () => {
   openModal('batchModal');
 });
 document.getElementById('drawerDownloadTemplateBtn').addEventListener('click', () => {
-  window.location.href = '/api/sample-csv';
+  toggleDrawer(false);
+  showToast('📊 Downloading batch-wise student Excel sheet...', 'info');
+  window.location.href = '/api/export-students-excel';
 });
 document.getElementById('drawerOpenStaffBtn').addEventListener('click', () => {
   toggleDrawer(false);

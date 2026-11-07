@@ -172,4 +172,159 @@ function parseCsv(text) {
   return rows;
 }
 
-module.exports = { parseZip, parseXlsx, parseCsv };
+function buildZip(files) {
+  const localHeaders = [];
+  const centralDirs = [];
+  let offset = 0;
+
+  for (const f of files) {
+    const filenameBuf = Buffer.from(f.path, 'utf8');
+    const uncompressedData = Buffer.isBuffer(f.data) ? f.data : Buffer.from(f.data, 'utf8');
+    const crc = zlib.crc32(uncompressedData);
+    const compressedData = zlib.deflateRawSync(uncompressedData);
+
+    const lh = Buffer.alloc(30 + filenameBuf.length);
+    lh.writeUInt32LE(0x04034b50, 0);
+    lh.writeUInt16LE(20, 4);
+    lh.writeUInt16LE(0, 6);
+    lh.writeUInt16LE(8, 8);
+    lh.writeUInt16LE(0, 10);
+    lh.writeUInt16LE(0, 12);
+    lh.writeUInt32LE(crc, 14);
+    lh.writeUInt32LE(compressedData.length, 18);
+    lh.writeUInt32LE(uncompressedData.length, 22);
+    lh.writeUInt16LE(filenameBuf.length, 26);
+    lh.writeUInt16LE(0, 28);
+    filenameBuf.copy(lh, 30);
+    localHeaders.push(lh, compressedData);
+
+    const cd = Buffer.alloc(46 + filenameBuf.length);
+    cd.writeUInt32LE(0x02014b50, 0);
+    cd.writeUInt16LE(20, 4);
+    cd.writeUInt16LE(20, 6);
+    cd.writeUInt16LE(0, 8);
+    cd.writeUInt16LE(8, 10);
+    cd.writeUInt16LE(0, 12);
+    cd.writeUInt16LE(0, 14);
+    cd.writeUInt32LE(crc, 16);
+    cd.writeUInt32LE(compressedData.length, 20);
+    cd.writeUInt32LE(uncompressedData.length, 24);
+    cd.writeUInt16LE(filenameBuf.length, 28);
+    cd.writeUInt16LE(0, 30);
+    cd.writeUInt16LE(0, 32);
+    cd.writeUInt16LE(0, 34);
+    cd.writeUInt16LE(0, 36);
+    cd.writeUInt32LE(0, 38);
+    cd.writeUInt32LE(offset, 42);
+    filenameBuf.copy(cd, 46);
+    centralDirs.push(cd);
+
+    offset += lh.length + compressedData.length;
+  }
+
+  const cdTotalSize = centralDirs.reduce((acc, b) => acc + b.length, 0);
+  const cdOffset = offset;
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(0, 4);
+  eocd.writeUInt16LE(0, 6);
+  eocd.writeUInt16LE(files.length, 8);
+  eocd.writeUInt16LE(files.length, 10);
+  eocd.writeUInt32LE(cdTotalSize, 12);
+  eocd.writeUInt32LE(cdOffset, 16);
+  eocd.writeUInt16LE(0, 20);
+
+  return Buffer.concat([...localHeaders, ...centralDirs, eocd]);
+}
+
+function generateXlsx(sheets) {
+  const sharedStrings = [];
+  const stringMap = new Map();
+
+  function getStringId(str) {
+    const s = String(str);
+    if (stringMap.has(s)) return stringMap.get(s);
+    const id = sharedStrings.length;
+    sharedStrings.push(s);
+    stringMap.set(s, id);
+    return id;
+  }
+
+  function colToLetter(c) {
+    let s = '';
+    c++;
+    while (c > 0) {
+      const m = (c - 1) % 26;
+      s = String.fromCharCode(65 + m) + s;
+      c = Math.floor((c - m) / 26);
+    }
+    return s;
+  }
+
+  function escapeXml(unsafe) {
+    return String(unsafe || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  }
+
+  const files = [];
+
+  let sheetsXml = '';
+  let wbRelsXml = '';
+  let contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">\n  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>\n  <Default Extension="xml" ContentType="application/xml"/>\n  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>\n  <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>\n`;
+
+  sheets.forEach((sheet, i) => {
+    const sheetId = i + 1;
+    const rId = `rId${sheetId}`;
+    const cleanSheetName = escapeXml((sheet.name || `Sheet${sheetId}`).slice(0, 31).replace(/[\\/*?:[\]]/g, ' '));
+    sheetsXml += `    <sheet name="${cleanSheetName}" sheetId="${sheetId}" r:id="${rId}"/>\n`;
+    wbRelsXml += `  <Relationship Id="${rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${sheetId}.xml"/>\n`;
+    contentTypesXml += `  <Override PartName="/xl/worksheets/sheet${sheetId}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>\n`;
+
+    let sheetData = '';
+    sheet.rows.forEach((row, rIdx) => {
+      const rowNum = rIdx + 1;
+      let rowCells = '';
+      row.forEach((cellVal, cIdx) => {
+        const cellRef = `${colToLetter(cIdx)}${rowNum}`;
+        if (cellVal === null || cellVal === undefined || cellVal === '') return;
+        if (typeof cellVal === 'number' && !isNaN(cellVal)) {
+          rowCells += `<c r="${cellRef}"><v>${cellVal}</v></c>`;
+        } else {
+          const sId = getStringId(cellVal);
+          rowCells += `<c r="${cellRef}" t="s"><v>${sId}</v></c>`;
+        }
+      });
+      sheetData += `<row r="${rowNum}">${rowCells}</row>`;
+    });
+
+    const worksheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">\n  <sheetData>${sheetData}</sheetData>\n</worksheet>`;
+    files.push({ path: `xl/worksheets/sheet${sheetId}.xml`, data: worksheetXml });
+  });
+
+  contentTypesXml += '</Types>';
+  files.push({ path: '[Content_Types].xml', data: contentTypesXml });
+
+  const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>\n</Relationships>`;
+  files.push({ path: '_rels/.rels', data: rootRelsXml });
+
+  const fullWbRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n${wbRelsXml}  <Relationship Id="rIdSharedStrings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>\n</Relationships>`;
+  files.push({ path: 'xl/_rels/workbook.xml.rels', data: fullWbRelsXml });
+
+  const fullWorkbookXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">\n  <sheets>\n${sheetsXml}  </sheets>\n</workbook>`;
+  files.push({ path: 'xl/workbook.xml', data: fullWorkbookXml });
+
+  let sstXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${sharedStrings.length}" uniqueCount="${sharedStrings.length}">\n`;
+  for (const s of sharedStrings) {
+    sstXml += `  <si><t>${escapeXml(s)}</t></si>\n`;
+  }
+  sstXml += '</sst>';
+  files.push({ path: 'xl/sharedStrings.xml', data: sstXml });
+
+  return buildZip(files);
+}
+
+module.exports = { parseZip, parseXlsx, parseCsv, generateXlsx, buildZip };

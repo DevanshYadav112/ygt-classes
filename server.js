@@ -2,7 +2,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const { initDb } = require('./db.js');
-const { parseXlsx, parseCsv } = require('./xlsx-zip.js');
+const { parseXlsx, parseCsv, generateXlsx } = require('./xlsx-zip.js');
 
 const PORT = process.env.PORT || 3000;
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'coaching.db');
@@ -370,20 +370,66 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    // 10. Sample CSV Download
-    if (pathname === '/api/sample-csv') {
-      const csv = `Roll No,Student Name,Parent Name,Parent Mobile,Total Fees,Fees Paid,Batch Name
-101,Rahul Sharma,Sunil Sharma,9876543210,65000,40000,Batch 1 - Class 11 JEE (Advanced)
-102,Priya Patel,Kirit Patel,9876543211,65000,20000,Batch 1 - Class 11 JEE (Advanced)
-103,Amit Verma,Rajesh Verma,9876543212,60000,60000,Batch 2 - Class 11 NEET (Medical)
-104,Sneha Joshi,Mukesh Joshi,9876543213,60000,15000,Batch 2 - Class 11 NEET (Medical)
-105,Vikram Singh,Harpreet Singh,9876543214,75000,35000,Batch 3 - Class 12 JEE (Mains + Adv)`;
+    // 10. Complete Multi-Sheet Batch-Segregated Excel Download (YGT_Classes_All_Batches_Students.xlsx)
+    if (pathname === '/api/export-students-excel' || pathname === '/api/sample-csv') {
+      try {
+        const batches = await db.getBatches();
+        const allStudentsRes = await db.getStudents({ limit: 10000 });
+        const allStudents = allStudentsRes.students || [];
 
-      res.writeHead(200, {
-        'Content-Type': 'text/csv',
-        'Content-Disposition': 'attachment; filename="coaching_students_template.csv"'
-      });
-      return res.end(csv);
+        // Sheet 1: Master "All Students" sheet
+        const masterHeader = ['Roll No', 'Student Name', 'Batch', 'Parent Name', 'Parent Mobile', 'Total Fees (₹)', 'Fees Paid (₹)', 'Pending Fees (₹)', 'Status'];
+        const masterRows = [masterHeader];
+        allStudents.forEach(s => {
+          masterRows.push([
+            s.roll_no || '',
+            s.name || '',
+            s.batch_name || s.batch_code || '',
+            s.parent_name || '',
+            s.parent_phone || '',
+            Number(s.total_fee || 0),
+            Number(s.fees_paid || 0),
+            Number(s.pending_fee || 0),
+            s.status || 'Active'
+          ]);
+        });
+
+        const sheets = [
+          { name: 'All Students', rows: masterRows }
+        ];
+
+        // Segregate each coaching batch into its own dedicated sheet tab!
+        batches.forEach(b => {
+          const batchStudents = allStudents.filter(s => s.batch_id === b.id || s.batch_name === b.name);
+          const batchRows = [
+            ['Roll No', 'Student Name', 'Parent Name', 'Parent Mobile', 'Total Fees (₹)', 'Fees Paid (₹)', 'Pending Fees (₹)', 'Status']
+          ];
+          batchStudents.forEach(s => {
+            batchRows.push([
+              s.roll_no || '',
+              s.name || '',
+              s.parent_name || '',
+              s.parent_phone || '',
+              Number(s.total_fee || 0),
+              Number(s.fees_paid || 0),
+              Number(s.pending_fee || 0),
+              s.status || 'Active'
+            ]);
+          });
+          const cleanName = (b.name || `Batch ${b.id}`).slice(0, 31).replace(/[\\/*?:[\]]/g, ' ');
+          sheets.push({ name: cleanName, rows: batchRows });
+        });
+
+        const xlsxBuf = generateXlsx(sheets);
+        res.writeHead(200, {
+          'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'Content-Disposition': 'attachment; filename="YGT_Classes_All_Batches_Students.xlsx"'
+        });
+        return res.end(xlsxBuf);
+      } catch (err) {
+        console.error('Error generating Excel file:', err);
+        return sendJson(res, 500, { error: 'Failed to generate Excel file: ' + err.message });
+      }
     }
 
     // 11. Android TWA Digital Asset Links (Removes Top URL Bar in APK)
