@@ -612,8 +612,8 @@ function initDb(dbFilePath) {
 
     async addActivityLog(staffName, actionType, description, studentId = null, batchId = null) {
       const res = await executeRun(`
-        INSERT INTO activity_logs (staff_name, action_type, description, student_id, batch_id)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO activity_logs (staff_name, action_type, description, student_id, batch_id, created_at)
+        VALUES (?, ?, ?, ?, ?, datetime('now'))
       `, [staffName, actionType, description, studentId ? Number(studentId) : null, batchId ? Number(batchId) : null]);
       return {
         id: res.lastInsertRowid,

@@ -2058,24 +2058,35 @@ body[data-theme="dark"] .btn-outline-neo {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .log-staff-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.2rem 0.55rem;
+  padding: 0.2rem 0.6rem;
   background-color: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-pill);
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .log-time-str {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 600;
   color: var(--text-secondary);
-  font-feature-settings: "tnum";
+  font-family: var(--font-mono, monospace);
+  background: var(--bg-secondary);
+  padding: 0.18rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  display: inline-flex;
+  align-items: center;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 .log-desc-text {

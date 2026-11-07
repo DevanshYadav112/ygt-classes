@@ -650,7 +650,10 @@ function renderSideLogs() {
       return `
         <div class="log-entry-card ${cardTypeClass}">
           <div class="log-meta-top">
-            <span class="log-staff-pill">👨‍💼 ${escapeHtml(log.staff_name)}</span>
+            <span class="log-staff-pill">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              ${escapeHtml(log.staff_name)}
+            </span>
             <span class="log-time-str">${timeFormatted}</span>
           </div>
           <div class="log-desc-text">${escapeHtml(log.description)}</div>
@@ -2561,8 +2564,24 @@ function formatCurrency(num) {
 
 function formatTimeAgo(isoStr) {
   if (!isoStr) return '';
-  const date = new Date(isoStr.replace(' ', 'T'));
-  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  let s = String(isoStr).trim().replace(' ', 'T');
+  if (!s.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(s)) {
+    s += 'Z';
+  }
+  const date = new Date(s);
+  if (isNaN(date.getTime())) return isoStr;
+
+  const timePart = date.toLocaleTimeString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  }).toUpperCase();
+
+  const dayPart = date.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short' });
+  const datePart = date.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' }).replace(/,/g, '');
+
+  return `${timePart} • ${dayPart} • ${datePart}`;
 }
 
 function escapeHtml(str) {
